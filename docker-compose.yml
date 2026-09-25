@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: monitoolring
+      POSTGRES_USER: monitoolring
+      POSTGRES_PASSWORD: monitoolring
+    ports:
+      - "5433:5432"

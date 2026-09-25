@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: monitoolring-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/monitoolring}
+    username: ${DB_USER:monitoolring}
+    password: ${DB_PASSWORD:monitoolring}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.sql
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-in-prod-please-use-a-real-secret-min-32-bytes}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
