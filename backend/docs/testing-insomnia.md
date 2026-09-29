@@ -6,10 +6,34 @@ Guia para testar manualmente `POST /api/tools` e `PUT /api/tools/{id}` (SCRUM-78
 
 ```bash
 docker compose up -d          # sobe o Postgres em localhost:5433
-mvn spring-boot:run           # sobe a API em http://localhost:8080
 ```
 
-A API só sobe se o Postgres estiver acessível (Liquibase roda as migrations no start).
+O `application.yml` aponta por padrão para a porta **5432**, não para a 5433 do compose.
+Antes de subir a API, aponte a variável de ambiente (vale só para a janela de terminal):
+
+```powershell
+$env:DB_URL="jdbc:postgresql://localhost:5433/monitoolring"     # Windows PowerShell
+```
+
+```bash
+export DB_URL="jdbc:postgresql://localhost:5433/monitoolring"   # Linux/macOS
+```
+
+```bash
+./mvnw spring-boot:run        # sobe a API em http://localhost:8080
+```
+
+A API só sobe se o Postgres estiver acessível (Liquibase roda as migrations no start). Se
+a subida falhar na conexão, o `DB_URL` é a primeira coisa a conferir.
+
+Sanidade antes de testar qualquer rota autenticada — essa é pública e não precisa de token:
+
+```
+GET http://localhost:8080/api/health   →   200 {"status":"UP","service":"monitoolring-api",...}
+```
+
+> No PowerShell, `curl` é apelido de `Invoke-WebRequest` e lança erro em respostas 4xx.
+> Use `curl.exe` para ver a resposta real.
 
 ## 2. Gere um token JWT de teste
 
@@ -53,6 +77,10 @@ Ainda não existe um endpoint de login — o projeto só valida tokens já emiti
   }
   ```
 - Esperado: `200 OK`, corpo com `id`, `idUsuarioCriacao`/`idUsuarioAlteracao` iguais ao `sub` do token, `versao: 0`.
+
+  > **Divergência conhecida:** `api-convencoes-http.md` define `201 Created` para
+  > `POST /tools`. O código devolve `200` porque falta o `@ResponseStatus` no controller.
+  > Quando isso for corrigido, este guia precisa mudar junto.
 
 **Cenários de erro para testar**
 | Cenário | Body | Status esperado |
