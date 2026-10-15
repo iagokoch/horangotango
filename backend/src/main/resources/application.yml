@@ -24,6 +24,8 @@ management:
 app:
   jwt:
     secret: ${JWT_SECRET:change-me-in-prod-please-use-a-real-secret-min-32-bytes}
+    # Validade do token emitido no login (java.time.Duration: ISO-8601 "PT8H" ou formato simples "8h").
+    expiration: ${JWT_EXPIRATION:PT8H}
 
 springdoc:
   swagger-ui:

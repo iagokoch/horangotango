@@ -5,6 +5,8 @@ import java.util.Date;
 
 import javax.crypto.SecretKey;
 
+import com.monitoolring.api.domain.UserRole;
+
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
@@ -16,18 +18,28 @@ public final class JwtTestTokenFactory {
     private JwtTestTokenFactory() {
     }
 
-    public static String validTokenFor(String userId) {
+    public static String validTokenFor(String userId, UserRole role) {
         return Jwts.builder()
                 .subject(userId)
+                .claim("role", role.name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 60_000))
                 .signWith(KEY)
                 .compact();
     }
 
-    public static String expiredTokenFor(String userId) {
+    public static String staffToken(String userId) {
+        return validTokenFor(userId, UserRole.STAFF);
+    }
+
+    public static String memberToken(String userId) {
+        return validTokenFor(userId, UserRole.MEMBER);
+    }
+
+    public static String expiredTokenFor(String userId, UserRole role) {
         return Jwts.builder()
                 .subject(userId)
+                .claim("role", role.name())
                 .issuedAt(new Date(System.currentTimeMillis() - 120_000))
                 .expiration(new Date(System.currentTimeMillis() - 60_000))
                 .signWith(KEY)

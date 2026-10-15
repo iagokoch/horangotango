@@ -34,7 +34,7 @@ class ToolControllerIT extends AbstractIntegrationTest {
 
     @Test
     void createWithValidTokenPersistsTool() throws Exception {
-        String token = JwtTestTokenFactory.validTokenFor("user-abc");
+        String token = JwtTestTokenFactory.staffToken("user-abc");
 
         mockMvc.perform(post("/api/tools")
                         .header("Authorization", "Bearer " + token)
@@ -49,7 +49,7 @@ class ToolControllerIT extends AbstractIntegrationTest {
 
     @Test
     void createWithDuplicateCodigoIsRejected() throws Exception {
-        String token = JwtTestTokenFactory.validTokenFor("user-abc");
+        String token = JwtTestTokenFactory.staffToken("user-abc");
         String body = "{\"codigo\":\"DUPLICADO\",\"nome\":\"Martelo\",\"quantidade\":10}";
 
         mockMvc.perform(post("/api/tools")
@@ -68,7 +68,7 @@ class ToolControllerIT extends AbstractIntegrationTest {
 
     @Test
     void createWithMissingFieldsIsRejected() throws Exception {
-        String token = JwtTestTokenFactory.validTokenFor("user-abc");
+        String token = JwtTestTokenFactory.staffToken("user-abc");
 
         mockMvc.perform(post("/api/tools")
                         .header("Authorization", "Bearer " + token)
@@ -79,7 +79,7 @@ class ToolControllerIT extends AbstractIntegrationTest {
 
     @Test
     void updateWithCorrectVersionSucceedsAndIncrementsVersion() throws Exception {
-        String token = JwtTestTokenFactory.validTokenFor("user-creator");
+        String token = JwtTestTokenFactory.staffToken("user-creator");
         String createBody = "{\"codigo\":\"UPD-1\",\"nome\":\"Martelo\",\"quantidade\":10}";
 
         String createResponse = mockMvc.perform(post("/api/tools")
@@ -91,7 +91,7 @@ class ToolControllerIT extends AbstractIntegrationTest {
 
         String id = com.jayway.jsonpath.JsonPath.read(createResponse, "$.id");
 
-        String editorToken = JwtTestTokenFactory.validTokenFor("user-editor");
+        String editorToken = JwtTestTokenFactory.staffToken("user-editor");
         mockMvc.perform(put("/api/tools/{id}", id)
                         .header("Authorization", "Bearer " + editorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -106,7 +106,7 @@ class ToolControllerIT extends AbstractIntegrationTest {
 
     @Test
     void updateWithStaleVersionIsRejectedWithConflict() throws Exception {
-        String token = JwtTestTokenFactory.validTokenFor("user-abc");
+        String token = JwtTestTokenFactory.staffToken("user-abc");
         String createBody = "{\"codigo\":\"UPD-2\",\"nome\":\"Martelo\",\"quantidade\":10}";
 
         String createResponse = mockMvc.perform(post("/api/tools")
@@ -127,7 +127,7 @@ class ToolControllerIT extends AbstractIntegrationTest {
 
     @Test
     void updateOfUnknownIdReturnsNotFound() throws Exception {
-        String token = JwtTestTokenFactory.validTokenFor("user-abc");
+        String token = JwtTestTokenFactory.staffToken("user-abc");
 
         mockMvc.perform(put("/api/tools/{id}", "does-not-exist")
                         .header("Authorization", "Bearer " + token)
