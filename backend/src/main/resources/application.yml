@@ -26,6 +26,14 @@ app:
     secret: ${JWT_SECRET:change-me-in-prod-please-use-a-real-secret-min-32-bytes}
     # Validade do token emitido no login (java.time.Duration: ISO-8601 "PT8H" ou formato simples "8h").
     expiration: ${JWT_EXPIRATION:PT8H}
+  bootstrap:
+    # Primeiro Staff do sistema (FR-2): criado na subida SOMENTE se ainda não existir nenhum Staff.
+    # Os valores padrão abaixo são APENAS PARA DEV — em produção defina as variáveis de ambiente
+    # (ou APP_BOOTSTRAP_STAFF_EMAIL vazio para desligar) e troque a senha após o primeiro login.
+    staff:
+      nome: ${APP_BOOTSTRAP_STAFF_NOME:Staff Inicial (dev)}
+      email: ${APP_BOOTSTRAP_STAFF_EMAIL:staff@monitoolring.local}
+      password: ${APP_BOOTSTRAP_STAFF_PASSWORD:change-me-dev-only}
 
 springdoc:
   swagger-ui:

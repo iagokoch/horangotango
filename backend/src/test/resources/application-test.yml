@@ -1,3 +1,10 @@
 app:
   jwt:
     secret: test-secret-key-please-do-not-use-in-prod-min-32-bytes
+    expiration: PT1H
+  bootstrap:
+    # Staff criado na subida do contexto de teste; os ITs usam e-mails próprios, então não colide.
+    staff:
+      nome: Staff Bootstrap Teste
+      email: bootstrap.staff@test.local
+      password: bootstrap-senha-123

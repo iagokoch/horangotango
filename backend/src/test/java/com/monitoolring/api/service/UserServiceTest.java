@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +20,7 @@ import com.monitoolring.api.domain.UserRole;
 import com.monitoolring.api.dto.UserCreateRequest;
 import com.monitoolring.api.exception.DuplicateUserEmailException;
 import com.monitoolring.api.repository.UserRepository;
+import com.monitoolring.api.service.UserService.StaffBootstrapResult;
 
 class UserServiceTest {
 
@@ -62,6 +64,43 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.registerMember(
                 new UserCreateRequest("Ana", "ANA@example.com", "senha-forte-1")))
                 .isInstanceOf(DuplicateUserEmailException.class);
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void bootstrapCreatesStaffWhenNoneExists() {
+        when(userRepository.existsByPapel(UserRole.STAFF)).thenReturn(false);
+
+        StaffBootstrapResult result = userService.bootstrapFirstStaff("Staff Inicial", "Staff@Oficina.org", "senha-forte-1");
+
+        assertThat(result).isEqualTo(StaffBootstrapResult.CREATED);
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getPapel()).isEqualTo(UserRole.STAFF);
+        assertThat(saved.getValue().getEmail()).isEqualTo("staff@oficina.org");
+    }
+
+    @Test
+    void bootstrapDoesNothingWhenStaffAlreadyExists() {
+        when(userRepository.existsByPapel(UserRole.STAFF)).thenReturn(true);
+
+        StaffBootstrapResult result = userService.bootstrapFirstStaff("Staff Inicial", "staff@oficina.org", "senha-forte-1");
+
+        assertThat(result).isEqualTo(StaffBootstrapResult.STAFF_ALREADY_EXISTS);
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void bootstrapSkipsWhenNotConfiguredOrInvalid() {
+        when(userRepository.existsByPapel(UserRole.STAFF)).thenReturn(false);
+        when(userRepository.existsByEmail("membro@oficina.org")).thenReturn(true);
+
+        assertThat(userService.bootstrapFirstStaff("Staff", "", "senha-forte-1"))
+                .isEqualTo(StaffBootstrapResult.NOT_CONFIGURED);
+        assertThat(userService.bootstrapFirstStaff("Staff", "staff@oficina.org", "curta"))
+                .isEqualTo(StaffBootstrapResult.INVALID_PASSWORD);
+        assertThat(userService.bootstrapFirstStaff("Staff", "membro@oficina.org", "senha-forte-1"))
+                .isEqualTo(StaffBootstrapResult.EMAIL_ALREADY_IN_USE);
         verify(userRepository, never()).saveAndFlush(any());
     }
 
