@@ -35,6 +35,10 @@ projeto, presente ou futura.
    *caminho da URL*; nos corpos JSON de requisição/resposta (nomes de
    campos, mensagens de erro), a acentuação correta é preservada
    normalmente quando fizer sentido para o conteúdo.
+7. **Prefixo `/api`.** Todas as rotas ficam sob `/api` (`/api/tools`,
+   `/api/loans/{id}/return`, `/api/health`). Neste documento e em
+   [`api-convencoes-http.md`](./api-convencoes-http.md) as rotas aparecem
+   sem o prefixo por brevidade.
 
 ## 2. Tabela de tradução: termo de negócio → resource
 
@@ -99,6 +103,8 @@ GET /members/42
 ```
 
 ## 5. Exemplos de aplicação (visão geral)
+
+Rotas relativas ao prefixo `/api` (regra 7).
 
 | Recurso | Rota raiz | Sub-resources |
 |---|---|---|

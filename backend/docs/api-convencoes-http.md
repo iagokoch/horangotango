@@ -4,6 +4,16 @@ Este documento define como os métodos HTTP (`GET`, `POST`, `PUT`, `PATCH`,
 `DELETE`) devem ser usados sobre os resources definidos em
 [`api-nomenclatura-recursos.md`](./api-nomenclatura-recursos.md).
 
+> **Prefixo `/api`.** As rotas deste documento são escritas sem prefixo, mas no
+> código todas ficam sob `/api`: `GET /tools` é `GET /api/tools`,
+> `POST /auth/login` é `POST /api/auth/login`, e o health check é
+> `GET /api/health`.
+>
+> **Desenho-alvo, não estado atual.** Este documento descreve a API planejada.
+> Nem toda rota da tabela existe no código, e algumas das que existem ainda
+> divergem daqui. O que está implementado hoje é descrito no
+> [README do backend](../README.md#o-que-mudou-desde-a-n1).
+
 ## 1. Semântica adotada por verbo
 
 ### `GET` — leitura
