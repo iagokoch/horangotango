@@ -4,15 +4,21 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
+/**
+ * Container Postgres unico para toda a JVM de testes (padrao "singleton container").
+ * Nao usar {@code @Testcontainers}/{@code @Container}: eles param o container ao fim de cada
+ * classe, mas o Spring reaproveita o contexto em cache entre classes com a mesma configuracao,
+ * que ficaria apontando para um container ja parado. O Ryuk remove o container ao fim da JVM.
+ */
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
-    @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
+
+    static {
+        POSTGRES.start();
+    }
 
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) {
