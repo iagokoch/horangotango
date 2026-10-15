@@ -2,6 +2,7 @@ package com.monitoolring.api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -9,6 +10,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.monitoolring.api.domain.UserRole;
+import com.monitoolring.api.security.JwtAccessDeniedHandler;
 import com.monitoolring.api.security.JwtAuthenticationEntryPoint;
 import com.monitoolring.api.security.JwtAuthenticationFilter;
 
@@ -16,9 +19,12 @@ import com.monitoolring.api.security.JwtAuthenticationFilter;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final String STAFF = UserRole.STAFF.name();
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter,
-            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) throws Exception {
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+            JwtAccessDeniedHandler jwtAccessDeniedHandler) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -27,10 +33,14 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers("/api/health").permitAll()
-                        .requestMatchers("/api/tools/**").authenticated()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/staff", "/api/staff/**").hasRole(STAFF)
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
-                .exceptionHandling(e -> e.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
