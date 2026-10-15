@@ -6,7 +6,7 @@ Este documento registra o **motivo** das decisões tomadas em
 
 ## 1. Por que REST orientado a recursos, e não RPC/verbos na URL
 
-A stack do projeto (`spring-boot-starter-webmvc`) é construída em torno do
+A stack do projeto (`spring-boot-starter-web`, Spring MVC) é construída em torno do
 modelo de controllers mapeando rotas para recursos, o que casa
 naturalmente com REST orientado a substantivos. Alternativas baseadas em
 RPC (`POST /confirmCheckout`, `POST /getTools`) foram descartadas
@@ -42,24 +42,28 @@ para preservar a rastreabilidade entre requisito e rota:
 
 | Termo do PRD | Resource (API) |
 |---|---|
-| Ferramenta | `tool` |
-| Empréstimo | `loan` |
-| Retirada | `checkout` |
-| Devolução | `return` |
-| Perda | `loss` |
-| Membro | `member` |
+| Ferramenta | `tools` |
+| Empréstimo | `loans` |
+| Retirada | *(criação de `loans`: `POST /loans`)* |
+| Devolução | `return` (sub-resource de ação: `POST /loans/{id}/return`) |
+| Perda | `loss` (sub-resource de ação: `POST /loans/{id}/loss`) |
+| Membro | `members` |
+
+A tabela completa, incluindo Staff, Checklist e configuração, está na
+seção 2 de [`api-nomenclatura-recursos.md`](./api-nomenclatura-recursos.md).
 
 - **Consistência com o restante do código.** Variáveis, métodos e classes
   do projeto também vão adotar inglês; manter as rotas em português
   criaria uma inconsistência de idioma logo na camada mais visível da
   API.
-- **Um único glossário central.** A tabela acima é o ponto único de
-  tradução entre o PRD (português) e a API (inglês) — qualquer nova rota
-  parte dela em vez de decidir a tradução ad-hoc.
+- **Um único glossário central.** A tabela de tradução de
+  `api-nomenclatura-recursos.md` (seção 2) é o ponto único de tradução
+  entre o PRD (português) e a API (inglês) — qualquer nova rota parte
+  dela em vez de decidir a tradução ad-hoc.
 - **Sem perda de rastreabilidade.** Como o glossário é fixo e pequeno,
   revisar/validar uma rota contra o requisito correspondente do PRD
   continua sendo trivial (ex.: FR-9 fala em "Retirada", a rota é
-  `POST /loans` seguida de eventos de checkout).
+  `POST /loans` — a Retirada cria o Empréstimo).
 
 ## 3. Por que sub-resources de ação em vez de verbo ou flag de status
 
@@ -97,15 +101,18 @@ registro.
 ## 5. Benefícios de consistência, legibilidade e escalabilidade
 
 - **Consistência:** todo novo endpoint segue as mesmas três regras
-  (substantivo plural em português, verbo HTTP mapeado por semântica,
+  (substantivo plural em inglês, verbo HTTP mapeado por semântica,
   sub-resource de ação para transições de estado), reduzindo decisões
   ad-hoc a cada nova funcionalidade.
 - **Legibilidade:** a URL descreve o recurso e, quando aplicável, o evento
   de negócio (`loans/{id}/return`), sem exigir consulta a
   documentação externa para entender o que uma rota faz.
 - **Escalabilidade do padrão:** funcionalidades hoje fora do escopo do MVP
-  mas já mapeadas no PRD (§7.1) — Treinamento Prévio (N2) e Multas
+  mas já mapeadas no PRD (§7.2 e §11) — Treinamento Prévio (rotulado
+  "N2" no PRD, mas adiado para a N3 por decisão de escopo da equipe da N2;
+  ver o [README do backend](../README.md#pendências-para-a-n3)) e Multas
   automatizadas (N3) — encaixam-se no mesmo padrão sem exigir uma nova
   convenção: por exemplo, `POST /loans/{id}/training` ou
   `GET /loans/{id}/fine` seguiriam a mesma lógica de sub-resource já
-  estabelecida aqui.
+  estabelecida aqui. São exemplos ilustrativos; o desenho real dessas
+  rotas ainda não foi decidido.
