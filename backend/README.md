@@ -5,6 +5,10 @@ Backend do projeto Monitoolring: Java 21, Spring Boot 3, Maven.
 Este é o backend de um monorepo (`backend/` + `frontend/`), no repositório
 [iagokoch/horangotango](https://github.com/iagokoch/horangotango). Branch única: `main`.
 
+É a entrega da **N2**, construída sobre o backend da N1. O que foi herdado, o que a N2
+acrescenta e o que fica para a N3 está em [O que mudou desde a N1](#o-que-mudou-desde-a-n1)
+e [Pendências para a N3](#pendências-para-a-n3).
+
 ## Stack
 
 - Java 21
@@ -132,3 +136,94 @@ src/main/resources/
 ├── application.yml
 └── db/changelog/            # Migrations Liquibase
 ```
+
+## O que mudou desde a N1
+
+A N1 está em [iagokoch/monitoolring--backend](https://github.com/iagokoch/monitoolring--backend)
+(fork de `horangotango/monitoolring--backend`). A N2 importou a branch **`master`** da N1
+(PRs #2 "Feature/api ferramentas" e #3 "Feature/delete", merge em 2026-09-17) no commit
+`db5f4b1` deste repositório. Essa é a base de comparação abaixo.
+
+> **Ressalva sobre o README da N1.** O README da N1, inclusive na `master`, descreve a branch
+> `inicializacao-projeto`: só Web/Validation/Actuator, sem banco, e um pacote `enums/` que
+> nunca existiu no código. Ele não foi atualizado quando os PRs #2 e #3 entraram. Por isso,
+> lendo só o README da N1, parece que JWT, Spring Security, Liquibase, JPA/PostgreSQL e
+> Swagger são novidades da N2. **Não são — vieram da `master` da N1.**
+
+### Herdado da N1 (`master`)
+
+- Spring Boot 3.3 com Web, Validation e Actuator; `GET /api/health`; CORS para
+  `http://localhost:3000`.
+- Spring Security stateless com **validação** de JWT HS256 (jjwt): o filtro lê
+  `Authorization: Bearer`, valida a assinatura e usa a claim `sub` como usuário. Não há
+  emissão de token, login nem papéis.
+- JPA/Hibernate + PostgreSQL; Liquibase com um único changeset, que cria a tabela
+  `ferramentas` (`codigo`, `nome`, `quantidade`, campos de auditoria e `versao`).
+- CRUD de ferramentas em `/api/tools`: `POST` (responde `200`), `PUT /{id}` com optimistic
+  lock pelo campo `versao` (`409` se desatualizado), `GET` lista e `GET /{id}`,
+  `DELETE /{id}` **físico** (`204`). Código duplicado responde `400`.
+- springdoc/Swagger UI, MapStruct (`mapper/`) e `GlobalExceptionHandler` com `ErrorResponse`.
+- Testes unitários (`ToolServiceTest`, `JwtServiceTest`), base de integração com
+  Testcontainers (`AbstractIntegrationTest`, `ToolControllerIT`) e `docker-compose.yml` com
+  Postgres na porta 5433.
+- Documentação em `docs/`: PRD e os padrões de API (`api-*.md`), além do guia do Insomnia.
+
+### O que a N2 acrescenta
+
+Legenda: ✅ na `main` · 🚧 em andamento (fora da `main`) · 📋 planejado
+
+| Item | Status |
+|---|---|
+| Reorganização em monorepo (`backend/` + `frontend/`) | ✅ |
+| `/api/health` e `/error` liberados sem token no `SecurityConfig` (na N1 caíam no `denyAll`) | ✅ |
+| Instruções de setup corrigidas (Postgres na 5433 via `DB_URL`, guia do Insomnia) | ✅ |
+| FR-1/FR-2: cadastro de Membro, login, logout, cadastro de Staff por Staff, papéis MEMBER/STAFF e criação do primeiro Staff no setup | 🚧 |
+| FR-3/4/5: modelo de Ferramenta do PRD (categoria, valor estimado, estado de conservação, status com 5 estados); `POST` → `201`; `PUT` substituído por `PATCH` com inativação; fim do `DELETE` físico; código duplicado → `409` | 🚧 |
+| `./mvnw test` passar a executar os `*IT`; compatibilidade Testcontainers × Docker 29 | 🚧 |
+| CORS: corrigir o preflight (`OPTIONS`) | 🚧 |
+| FR-8: prazo padrão de devolução (`/settings/return-deadline`) | 📋 |
+| FR-9/10/11: Retirada com Checklist de Conservação e Prazo de Devolução (`POST /loans`) | 📋 |
+| FR-12/17/18: Bloqueio por Inadimplência, marcação de Atraso e liberação do Bloqueio | 📋 |
+| FR-13/14/16: Devolução com Checklist e consulta comparativa (`POST /loans/{id}/return`, `GET /loans/{id}/checklists`) | 📋 |
+| Token sem `exp` passar a ser recusado | 📋 planejado na N2, rodada 2 |
+| Mesmo formato de erro (`ErrorResponse`) para JSON malformado e erro `500` | 📋 planejado na N2, rodada 2 |
+
+Escopo da N2: 15 dos 19 FRs do PRD (~79%): FR-1 a FR-5, FR-8 a FR-14 e FR-16 a FR-18.
+As rotas citadas seguem [`docs/api-convencoes-http.md`](docs/api-convencoes-http.md), todas
+sob o prefixo `/api`. Esta tabela é atualizada a cada rodada.
+
+## Pendências para a N3
+
+O que **não** entra na N2, para a próxima equipe saber onde continuar. Nomes de rota de
+[`docs/api-convencoes-http.md`](docs/api-convencoes-http.md) e
+[`docs/api-nomenclatura-recursos.md`](docs/api-nomenclatura-recursos.md), sob `/api`.
+
+- **FR-6 — histórico de Membro (Staff):** falta a consulta de Staff aos Empréstimos de
+  qualquer Membro, com Atrasos, Perdas e divergências. Começa em `GET /loans?memberId={id}`
+  (nomenclatura §3), sobre o resource `loans` que a N2 cria.
+- **FR-7 — próprios Empréstimos (Membro):** falta `GET /members/{id}/loans` e
+  `GET /members/{id}` com o campo derivado `bloqueado` (nomenclatura §4), devolvendo `403`
+  quando um Membro consulta outro.
+- **FR-15 — divergência de Checklist:** falta a flag de divergência com justificativa
+  obrigatória em `POST /loans/{id}/return`, que manda a Ferramenta para "em reparo/inspeção".
+  O FR-16 da N2 cobre só a Devolução sem divergência (Ferramenta volta a "disponível").
+- **FR-19 — Perda/furto:** falta `POST /loans/{id}/loss`: encerra o Empréstimo como "Perda
+  registrada", muda a Ferramenta para "perdida" e precisa liberar o Bloqueio (FR-18), que
+  na N2 considera só Devoluções.
+- **Treinamento Prévio:** o PRD (§3, §7.2 e §11) o rotula como evolução **"N2"**, mas foi
+  **adiado para a N3 por decisão de escopo** da equipe da N2. Começa estendendo o cadastro
+  de `tools` (marcar quais exigem treinamento), registrando treinamentos por Membro e
+  acrescentando a verificação à regra do FR-12 em `POST /loans`. O desenho de resource
+  ainda não foi decidido.
+- **Multas automatizadas:** PRD §11 (N3). Depende do Atraso (FR-17). A justificativa
+  técnica (§5) cita `GET /loans/{id}/fine` só como exemplo do padrão.
+- **Revogação do token no logout:** o logout planejado na N2 (FR-1) não invalida o JWT no
+  servidor; um token copiado continua válido até expirar. Falta uma denylist ou tokens de vida curta com
+  refresh.
+- **NFRs de performance (PRD §5):** nada mede as metas de 1s para a consulta de
+  disponibilidade (FR-5) nem de 2s para Retirada/Devolução (FR-11, FR-13). Falta um teste
+  de carga com catálogo na casa das centenas.
+- **LGPD (PRD §5):** falta revisar a minimização dos dados de Membro, a retenção e a base
+  legal. A restrição de um Membro ver dados de outro depende do FR-7, acima.
+- **Endurecimentos menores:** recusar token sem `exp` e padronizar o erro de JSON
+  malformado/`500` estão planejados na N2, rodada 2. Se não entrarem, ficam para a N3.
