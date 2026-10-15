@@ -37,7 +37,7 @@ GET http://localhost:8080/api/health   →   200 {"status":"UP","service":"monit
 
 ## 2. Gere um token JWT de teste
 
-Ainda não existe um endpoint de login — o projeto só valida tokens já emitidos (assinatura HMAC + expiração), extraindo o usuário da claim `sub`. Para testar manualmente, gere um token assinado com o mesmo segredo da aplicação.
+Ainda não existe um endpoint de login — o projeto só valida tokens já emitidos (assinatura HMAC e, se o token tiver a claim `exp`, a expiração — token sem `exp` é aceito), extraindo o usuário da claim `sub`. Para testar manualmente, gere um token assinado com o mesmo segredo da aplicação.
 
 - Segredo padrão de dev (definido em `src/main/resources/application.yml`, variável `app.jwt.secret`, sobrescrevível por `JWT_SECRET`):
   ```

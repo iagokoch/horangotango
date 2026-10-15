@@ -77,9 +77,14 @@ Este é o backend de um monorepo (`backend/` + `frontend/`), no repositório
 |---------------------------|--------------------------------------|
 | `./mvnw compile`          | Só compila — verificação mais rápida |
 | `./mvnw spring-boot:run`  | Sobe a aplicação em modo dev         |
-| `./mvnw test`             | Executa os testes                    |
+| `./mvnw test`             | Executa os testes (ver nota abaixo)  |
 | `./mvnw clean package`    | Gera o JAR em `target/`              |
 | `docker compose up -d`    | Sobe o Postgres local                |
+
+> **O que `./mvnw test` roda hoje:** os testes unitários (`*Test`) e o `ApiApplicationTests`,
+> que sobe um Postgres via Testcontainers (por isso precisa de Docker). Os testes de
+> integração `*IT` (ex.: `ToolControllerIT`) **não** são executados por esse comando, porque
+> o pom não configura o Surefire/Failsafe para eles. A correção está em andamento.
 
 > **Testcontainers no Windows:** se `./mvnw test` falhar com *"Could not find a valid Docker
 > environment"* mesmo com o Docker Desktop rodando, crie `~/.testcontainers.properties` com
@@ -88,7 +93,9 @@ Este é o backend de um monorepo (`backend/` + `frontend/`), no repositório
 ## Autenticação
 
 Ainda não existe endpoint de login. A API apenas **valida** tokens JWT já emitidos
-(HMAC + expiração), extraindo o usuário da claim `sub`. Rotas públicas: `/api/health`,
+(assinatura HMAC e, se o token tiver a claim `exp`, a expiração — hoje um token sem `exp`
+é aceito), extraindo o usuário da claim `sub`. Não há papéis: qualquer token válido acessa
+todas as rotas de `/api/tools`. Rotas públicas: `/api/health`,
 `/error`, `/actuator/**` e a documentação (`/swagger-ui/**`, `/v3/api-docs/**`). Todo o
 resto exige `Authorization: Bearer <token>`.
 
