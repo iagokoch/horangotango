@@ -103,6 +103,19 @@ class JwtServiceTest {
     }
 
     @Test
+    void rejectsTokenWithoutExpiration() {
+        String token = Jwts.builder()
+                .subject("user-123")
+                .claim("role", "STAFF")
+                .issuedAt(new Date())
+                .signWith(KEY)
+                .compact();
+
+        assertThatThrownBy(() -> jwtService.validate(token))
+                .isInstanceOf(InvalidJwtException.class);
+    }
+
+    @Test
     void rejectsTokenSignedWithDifferentSecret() {
         JwtService otherService = new JwtService(
                 "another-completely-different-secret-key-32-bytes", EXPIRATION);

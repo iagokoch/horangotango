@@ -314,6 +314,14 @@ class ToolControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void tokenWithoutExpirationIsUnauthorized() throws Exception {
+        String neverExpires = JwtTestTokenFactory.tokenWithoutExpirationFor("staff-abc", UserRole.STAFF);
+
+        mockMvc.perform(get("/api/tools").header("Authorization", "Bearer " + neverExpires))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ---------- helpers ----------
 
     private static String uniqueCodigo() {

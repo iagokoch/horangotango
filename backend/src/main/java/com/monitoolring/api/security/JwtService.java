@@ -27,7 +27,7 @@ import io.jsonwebtoken.security.Keys;
  * {@code iat} e {@code exp}. A validade vem de {@code app.jwt.expiration}, um {@link Duration}
  * (aceita ISO-8601 como {@code PT8H} ou o formato simples do Spring como {@code 8h}).
  *
- * <p>Tokens sem claim {@code role} (ou com papel desconhecido) são rejeitados.
+ * <p>Tokens sem claim {@code exp}, sem claim {@code role} (ou com papel desconhecido) são rejeitados.
  */
 @Component
 public class JwtService {
@@ -78,6 +78,10 @@ public class JwtService {
         String userId = claims.getSubject();
         if (userId == null || userId.isBlank()) {
             throw new InvalidJwtException("Token JWT sem identificação do usuário.", null);
+        }
+        // O jjwt só valida exp quando ela existe; sem esta checagem um token sem exp nunca expiraria.
+        if (claims.getExpiration() == null) {
+            throw new InvalidJwtException("Token JWT sem data de expiração.", null);
         }
         return new AuthenticatedUser(userId, parseRole(claims.get(ROLE_CLAIM, String.class)));
     }

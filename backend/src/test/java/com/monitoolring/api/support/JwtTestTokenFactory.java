@@ -36,6 +36,16 @@ public final class JwtTestTokenFactory {
         return validTokenFor(userId, UserRole.MEMBER);
     }
 
+    /** Token assinado com a chave correta, mas sem a claim {@code exp} (nunca expiraria). */
+    public static String tokenWithoutExpirationFor(String userId, UserRole role) {
+        return Jwts.builder()
+                .subject(userId)
+                .claim("role", role.name())
+                .issuedAt(new Date())
+                .signWith(KEY)
+                .compact();
+    }
+
     public static String expiredTokenFor(String userId, UserRole role) {
         return Jwts.builder()
                 .subject(userId)
