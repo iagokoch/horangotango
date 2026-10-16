@@ -46,13 +46,35 @@ projeto, presente ou futura.
 |---|---|---|
 | Membro | `members` | Cadastro self-service (FR-1) |
 | Responsável da Oficina / Staff | `staff` | Termo já usado no próprio PRD; só é criado por outro Staff (FR-2) |
-| Ferramenta | `tools` | Possui 5 estados: disponível, emprestada, em reparo/inspeção, perdida, inativa |
+| Ferramenta | `tools` | Possui 5 estados: disponível, emprestada, em reparo/inspeção, perdida, inativa (valores na API: ver 2.1) |
 | Empréstimo | `loans` | Liga um Membro a uma Ferramenta; criado no ato da Retirada |
 | Checklist de Conservação | `checklists` | Sempre um sub-resource de `loans`; nunca existe isolado |
 | Devolução | *(sub-resource de ação em `loans`)* | Não é uma coleção própria — ver seção 3 |
 | Perda | *(sub-resource de ação em `loans`)* | Não é uma coleção própria — ver seção 3 |
 | Prazo padrão de devolução | `settings` | Resource de configuração, com um recurso singleton `return-deadline` |
 | Bloqueio por Inadimplência | *(não é resource próprio)* | Campo derivado, exposto dentro de `members/{id}` — ver seção 4 |
+
+### 2.1 Valores de enum: API (inglês) × Glossário do PRD (português)
+
+Os valores de enum trafegam em inglês e MAIÚSCULAS no JSON (campos `status` da
+Ferramenta e `papel` da conta, e o filtro `GET /tools?status=`). A tabela abaixo é
+a tradução oficial para os termos do Glossário do PRD (§3).
+
+| Valor na API | Termo do PRD | Quem define |
+|---|---|---|
+| `AVAILABLE` | disponível | Cadastro (FR-3), reativação por Staff via `PATCH` (FR-4) e Devolução sem divergência (FR-16) |
+| `ON_LOAN` | emprestada | Retirada (FR-11). Não pode ser pedido no `PATCH` (`422`) |
+| `UNDER_REPAIR` | em reparo/inspeção | Devolução com divergência (FR-15, pendente para a N3). Não pode ser pedido no `PATCH` (`422`) |
+| `LOST` | perdida | Registro de Perda (FR-19, pendente para a N3). Não pode ser pedido no `PATCH` (`422`) |
+| `INACTIVE` | inativa | Inativação por Staff via `PATCH` (FR-4) |
+
+| Valor na API (`papel`) | Termo do PRD |
+|---|---|
+| `MEMBER` | Membro |
+| `STAFF` | Responsável da Oficina (Staff) |
+
+Os nomes de campo do JSON continuam em português (`codigo`, `valorEstimado`,
+`estadoConservacao`, `papel`), como permite a regra 6.
 
 ## 3. Sub-resources: quando aninhar
 

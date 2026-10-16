@@ -10,8 +10,9 @@ Este documento define como os métodos HTTP (`GET`, `POST`, `PUT`, `PATCH`,
 > `GET /api/health`.
 >
 > **Desenho-alvo, não estado atual.** Este documento descreve a API planejada.
-> Nem toda rota da tabela existe no código, e algumas das que existem ainda
-> divergem daqui. O que está implementado hoje é descrito no
+> Hoje existem no código as rotas de `auth`, `staff` e `tools` da tabela da
+> seção 2, além de `GET /api/health`. As de `members`, `loans` e `settings`
+> ainda não estão na `main`. O estado de cada item está no
 > [README do backend](../README.md#o-que-mudou-desde-a-n1).
 
 ## 1. Semântica adotada por verbo
@@ -56,12 +57,12 @@ histórico permanente. "Remoção" de uma Ferramenta é sempre lógica, via
 |---|---|---|---|---|
 | `POST` | `/auth/register` | Membro cria a própria conta | Público | `201` |
 | `POST` | `/auth/login` | Autentica e inicia sessão | Público | `200` |
-| `POST` | `/auth/logout` | Encerra a sessão atual | Membro/Staff | `204` |
+| `POST` | `/auth/logout` | Encerra a sessão no cliente. É stateless: o servidor não invalida o token, que segue válido até expirar (revogação é N3) | Membro/Staff | `204` |
 | `POST` | `/staff` | Staff cadastra outro Staff (FR-2) | Staff | `201` |
 | `GET` | `/tools` | Lista catálogo com disponibilidade em tempo real (FR-5) | Membro/Staff | `200` |
 | `POST` | `/tools` | Cadastra nova Ferramenta (FR-3) | Staff | `201` |
 | `GET` | `/tools/{id}` | Detalha uma Ferramenta | Membro/Staff | `200` |
-| `PATCH` | `/tools/{id}` | Edita dados ou inativa (FR-4) | Staff | `200` |
+| `PATCH` | `/tools/{id}` | Edita dados, inativa ou reativa (FR-4); exige `versao` (optimistic lock) | Staff | `200` |
 | `GET` | `/members/{id}` | Consulta dados e bloqueio do próprio Membro (FR-7) ou de qualquer Membro (Staff, FR-6) | Membro (próprio)/Staff | `200` |
 | `GET` | `/members/{id}/loans` | Histórico de empréstimos do Membro | Membro (próprio)/Staff | `200` |
 | `GET` | `/loans` | Lista empréstimos (Staff filtra por status/membro) | Staff | `200` |
@@ -80,9 +81,33 @@ histórico permanente. "Remoção" de uma Ferramenta é sempre lógica, via
 | `200 OK` | Leitura bem-sucedida, ou ação/transição que retorna a representação atualizada do resource (ex.: `POST /loans/{id}/return`) |
 | `201 Created` | Criação de um novo resource identificável (ex.: `POST /tools`, `POST /loans`) |
 | `204 No Content` | Ação bem-sucedida sem corpo de resposta (ex.: `logout`) |
-| `400 Bad Request` | Corpo da requisição malformado ou faltando campo obrigatório |
-| `401 Unauthorized` | Requisição sem sessão autenticada em rota que exige autenticação |
+| `400 Bad Request` | A requisição não tem a forma esperada: JSON malformado, tipo errado, parâmetro inválido (ex.: `?status=` com valor inexistente) ou falha de Bean Validation em algum campo (obrigatório ausente ou em branco, tamanho, formato de e-mail, `valorEstimado` ≤ 0). Ver 3.1 |
+| `401 Unauthorized` | Requisição sem token válido (ausente, malformado, assinatura errada, expirado ou sem `exp`) em rota que exige autenticação; também login com credenciais inválidas |
 | `403 Forbidden` | Sessão autenticada, mas sem permissão para o recurso (ex.: Membro tentando acessar histórico de outro Membro, ou rota exclusiva de Staff) |
 | `404 Not Found` | Resource referenciado não existe |
-| `409 Conflict` | Violação de regra de estado/concorrência — ex.: tentativa de Retirada com Membro bloqueado por inadimplência (FR-12), ou duas Retiradas simultâneas da mesma Ferramenta (RNF de consistência) |
-| `422 Unprocessable Entity` | Corpo bem formado, mas com valor inválido para a regra de negócio (ex.: Checklist com campo obrigatório vazio, FR-10) |
+| `405 Method Not Allowed` | Método não suportado na rota (ex.: `DELETE` ou `PUT` em `/tools/{id}`) |
+| `409 Conflict` | Conflito com o estado atual do sistema: identificador já usado (e-mail, código de Ferramenta), `versao` desatualizada no `PATCH` (optimistic lock), mudança de status de Ferramenta emprestada, tentativa de Retirada com Membro bloqueado por inadimplência (FR-12) ou duas Retiradas simultâneas da mesma Ferramenta (RNF de consistência) |
+| `422 Unprocessable Entity` | Corpo bem formado e válido campo a campo, mas que viola uma regra de negócio (ex.: Checklist incompleto, FR-10; `status` não permitido no `PATCH` de Ferramenta). Ver 3.1 |
+| `500 Internal Server Error` | Erro inesperado no servidor. A mensagem é genérica e não expõe detalhe interno; o stack trace fica só no log |
+
+Todo erro volta no mesmo formato JSON (`ErrorResponse`: `timestamp`, `status`,
+`error`, `message`, `details`). Em `400` por Bean Validation, `details` lista
+os campos com problema. A exceção conhecida são os erros lançados em filtros do
+servlet fora do Spring MVC, que ainda saem no formato padrão do Spring Boot
+(pendência menor, registrada no README).
+
+### 3.1 Fronteira entre `400`, `422` e `409`
+
+Decisão da equipe na N2:
+
+- **`400` — forma.** O servidor não consegue interpretar o pedido ou algum campo,
+  olhado isoladamente, não tem o formato exigido. Isso cobre JSON malformado, tipo
+  errado e as anotações de Bean Validation do DTO (`@NotBlank`, `@Size`,
+  `@Positive`, `@Email`, `@NotNull` etc.). Exemplo: `PATCH /tools/{id}` sem `versao`.
+- **`422` — regra de negócio.** O corpo está bem formado e cada campo é válido, mas o
+  pedido viola uma regra do domínio. Exemplos: Checklist de Conservação sem o mínimo
+  exigido pelo PRD (FR-10) e `PATCH /tools/{id}` pedindo `status` `ON_LOAN`, `LOST` ou
+  `UNDER_REPAIR`, que só os fluxos de Empréstimo, Devolução e Perda podem definir.
+- **`409` — estado atual.** O pedido seria aceito em outro momento, mas conflita com o
+  estado atual dos dados: duplicidade, versão desatualizada, Ferramenta emprestada,
+  Membro bloqueado.
