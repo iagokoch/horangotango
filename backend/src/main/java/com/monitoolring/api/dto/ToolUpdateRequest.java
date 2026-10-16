@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import com.monitoolring.api.domain.ToolStatus;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -38,8 +39,11 @@ public record ToolUpdateRequest(
         @Size(max = 1000, message = "estadoConservacao deve ter no máximo 1000 caracteres")
         String estadoConservacao,
 
+        @Schema(description = "Só AVAILABLE (reativar) ou INACTIVE (inativar). ON_LOAN, LOST e "
+                + "UNDER_REPAIR são definidos pelos fluxos de empréstimo e devolvem 422.")
         ToolStatus status,
 
+        @Schema(description = "Versão atual do registro (optimistic lock); divergente devolve 409.")
         @NotNull(message = "versao é obrigatória")
         Integer versao
 ) {

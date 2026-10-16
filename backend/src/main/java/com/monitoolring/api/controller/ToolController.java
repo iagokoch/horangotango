@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.monitoolring.api.domain.Tool;
 import com.monitoolring.api.domain.ToolStatus;
+import com.monitoolring.api.dto.ErrorResponse;
 import com.monitoolring.api.dto.ToolCreateRequest;
 import com.monitoolring.api.dto.ToolResponse;
 import com.monitoolring.api.dto.ToolUpdateRequest;
@@ -24,6 +25,10 @@ import com.monitoolring.api.service.ToolService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -50,6 +55,21 @@ public class ToolController {
                     + "nasce sempre com status AVAILABLE. id, auditoria e versão são gerados pelo servidor a partir "
                     + "do token JWT. Respostas: 201 criada, 400 corpo inválido, 401 sem token, 403 sem papel STAFF, "
                     + "409 código já cadastrado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Ferramenta criada (status AVAILABLE)"),
+            @ApiResponse(responseCode = "400", description = "Corpo ou parâmetro inválido",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel sem permissão para a operação",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Código já cadastrado",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ToolResponse create(@Valid @RequestBody ToolCreateRequest request) {
@@ -65,6 +85,27 @@ public class ToolController {
                     + "400 corpo inválido, 401 sem token, 403 sem papel STAFF, 404 inexistente, 409 versão divergente "
                     + "/ código duplicado / ferramenta emprestada não pode mudar de status, 422 status ON_LOAN, LOST "
                     + "ou UNDER_REPAIR pedido manualmente (são definidos pelos fluxos de empréstimo).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK"),
+            @ApiResponse(responseCode = "400", description = "Corpo ou parâmetro inválido",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel sem permissão para a operação",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Versão desatualizada, código duplicado ou ferramenta emprestada",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Status ON_LOAN, LOST ou UNDER_REPAIR pedido no PATCH",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PatchMapping("/{id}")
     public ToolResponse update(@PathVariable String id, @Valid @RequestBody ToolUpdateRequest request) {
         String idUsuario = currentUserProvider.getCurrentUserId();
@@ -75,6 +116,15 @@ public class ToolController {
     @Operation(summary = "Lista o catálogo de ferramentas com status (Membro/Staff)",
             description = "FR-5. Membro e Staff. Ordenado por código; o status reflete o banco no momento da "
                     + "consulta (sem cache). Filtro opcional por status.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK"),
+            @ApiResponse(responseCode = "400", description = "Valor inválido no filtro status",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping
     public List<ToolResponse> findAll(
             @Parameter(description = "Filtra pelo status, ex.: AVAILABLE")
@@ -86,6 +136,15 @@ public class ToolController {
 
     @Operation(summary = "Busca uma ferramenta pelo id (Membro/Staff)",
             description = "Membro e Staff. Respostas: 200, 401 sem token, 404 inexistente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK"),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping("/{id}")
     public ToolResponse findById(@PathVariable String id) {
         return toolMapper.toResponse(toolService.findById(id));
