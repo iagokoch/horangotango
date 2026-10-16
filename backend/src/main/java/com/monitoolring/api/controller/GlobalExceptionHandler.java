@@ -2,10 +2,14 @@ package com.monitoolring.api.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,6 +28,8 @@ import com.monitoolring.api.exception.ToolVersionConflictException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
@@ -108,5 +114,33 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
                 HttpStatus.CONFLICT.value(), "Conflict",
                 "Ferramenta foi alterada por outra requisição. Recarregue os dados e tente novamente."));
+    }
+
+    /**
+     * Devolve as exceções do Spring Security ao {@code ExceptionTranslationFilter}, que responde 401/403
+     * pelos handlers de segurança; sem isto o handler genérico abaixo as transformaria em 500.
+     */
+    @ExceptionHandler({AccessDeniedException.class, AuthenticationException.class})
+    public void rethrowSecurityException(RuntimeException ex) {
+        throw ex;
+    }
+
+    /**
+     * Rede de segurança para o que não foi mapeado acima. Exceções padrão do Spring MVC
+     * ({@link org.springframework.web.ErrorResponse}, ex.: 415, 406, 400 por parâmetro ausente) mantêm
+     * o status original; qualquer outra vira 500 com mensagem genérica e é logada com stack no servidor.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        if (ex instanceof org.springframework.web.ErrorResponse springError) {
+            HttpStatus status = HttpStatus.valueOf(springError.getStatusCode().value());
+            String detail = springError.getBody().getDetail();
+            return ResponseEntity.status(status).headers(springError.getHeaders()).body(ErrorResponse.of(
+                    status.value(), status.getReasonPhrase(), detail != null ? detail : status.getReasonPhrase()));
+        }
+        log.error("Erro inesperado ao processar a requisição", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error",
+                "Erro interno inesperado. Tente novamente mais tarde."));
     }
 }
