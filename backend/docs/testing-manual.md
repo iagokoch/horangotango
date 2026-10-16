@@ -13,7 +13,7 @@ preferir, mostra o mesmo fluxo com `curl`.
 
 ## 1. Suba a aplicação
 
-Siga o [README do backend](../README.md#como-iniciar): `docker compose up -d`, `DB_URL`
+Siga o [README do backend](../../README.md#como-iniciar): `docker compose up -d`, `DB_URL`
 apontando para a porta 5433 e `./mvnw spring-boot:run`. Confira:
 
 ```

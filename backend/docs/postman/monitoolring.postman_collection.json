@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6f1d2c1e-3b8a-4f0e-9c55-6d2a0b7e4a10",
     "name": "Monitoolring API (N2)",
-    "description": "Coleção da API do backend Monitoolring. Pré-requisito: API rodando (ver backend/README.md). Rode a coleção inteira em ordem (Runner ou newman): os requests de login gravam `token` (Staff) e `memberToken` (Membro), e o cadastro de ferramenta grava `toolId`/`toolVersao`. E-mails e códigos são gerados por execução, então a coleção pode rodar várias vezes no mesmo banco.",
+    "description": "Coleção da API do backend Monitoolring. Pré-requisito: API rodando (ver o README.md na raiz do repositório). Rode a coleção inteira em ordem (Runner ou newman): os requests de login gravam `token` (Staff) e `memberToken` (Membro), e o cadastro de ferramenta grava `toolId`/`toolVersao`. E-mails e códigos são gerados por execução, então a coleção pode rodar várias vezes no mesmo banco.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

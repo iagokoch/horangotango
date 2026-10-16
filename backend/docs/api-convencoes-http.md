@@ -13,7 +13,7 @@ Este documento define como os métodos HTTP (`GET`, `POST`, `PUT`, `PATCH`,
 > Hoje existem no código as rotas de `auth`, `staff` e `tools` da tabela da
 > seção 2, além de `GET /api/health`. As de `members`, `loans` e `settings`
 > ainda não estão na `main`. O estado de cada item está no
-> [README do backend](../README.md#o-que-mudou-desde-a-n1).
+> [README do backend](../../README.md#o-que-mudou-desde-a-n1).
 
 ## 1. Semântica adotada por verbo
 

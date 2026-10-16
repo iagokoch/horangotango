@@ -110,7 +110,7 @@ registro.
 - **Escalabilidade do padrão:** funcionalidades hoje fora do escopo do MVP
   mas já mapeadas no PRD (§7.2 e §11) — Treinamento Prévio (rotulado
   "N2" no PRD, mas adiado para a N3 por decisão de escopo da equipe da N2;
-  ver o [README do backend](../README.md#pendências-para-a-n3)) e Multas
+  ver o [README do backend](../../README.md#pendências-para-a-n3)) e Multas
   automatizadas (N3) — encaixam-se no mesmo padrão sem exigir uma nova
   convenção: por exemplo, `POST /loans/{id}/training` ou
   `GET /loans/{id}/fine` seguiriam a mesma lógica de sub-resource já
