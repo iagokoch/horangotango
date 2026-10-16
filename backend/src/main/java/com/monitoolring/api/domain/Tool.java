@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import com.monitoolring.api.exception.InvalidToolStatusTransitionException;
+import com.monitoolring.api.exception.ToolNotAvailableException;
 import com.monitoolring.api.exception.ToolStatusConflictException;
 
 import jakarta.persistence.Column;
@@ -107,6 +108,21 @@ public class Tool {
         if (edicao.estadoConservacao() != null) {
             this.estadoConservacao = edicao.estadoConservacao();
         }
+        this.idUsuarioAlteracao = idUsuario;
+        this.dataHoraAlteracao = now;
+    }
+
+    /** FR-9: só uma Ferramenta AVAILABLE pode ser retirada; o motivo da recusa traz o status atual. */
+    public void assertDisponivelParaRetirada() {
+        if (this.status != ToolStatus.AVAILABLE) {
+            throw new ToolNotAvailableException(this.codigo, this.status);
+        }
+    }
+
+    /** FR-11: a confirmação da Retirada marca a Ferramenta como emprestada. */
+    public void registrarRetirada(String idUsuario, Instant now) {
+        assertDisponivelParaRetirada();
+        this.status = ToolStatus.ON_LOAN;
         this.idUsuarioAlteracao = idUsuario;
         this.dataHoraAlteracao = now;
     }

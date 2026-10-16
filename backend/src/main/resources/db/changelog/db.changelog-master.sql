@@ -62,3 +62,65 @@ ALTER TABLE ferramentas DROP COLUMN quantidade;
 --rollback ALTER TABLE ferramentas DROP COLUMN estado_conservacao;
 --rollback ALTER TABLE ferramentas DROP COLUMN valor_estimado;
 --rollback ALTER TABLE ferramentas DROP COLUMN categoria;
+
+--changeset monitoolring:4-create-table-configuracao-prazo-devolucao
+--comment: Prazo padrao de devolucao (FR-8). Tabela singleton: no maximo uma linha (id = 1); sem linha = prazo ainda nao configurado. dias entre 1 e 365 (dias corridos). Auditoria da ultima alteracao feita por Staff.
+CREATE TABLE configuracao_prazo_devolucao (
+    id                    INTEGER      NOT NULL,
+    dias                  INTEGER      NOT NULL,
+    id_usuario_alteracao  VARCHAR(38)  NOT NULL,
+    data_hora_alteracao   TIMESTAMP    NOT NULL,
+    CONSTRAINT pk_configuracao_prazo_devolucao PRIMARY KEY (id),
+    CONSTRAINT ck_configuracao_prazo_devolucao_singleton CHECK (id = 1),
+    CONSTRAINT ck_configuracao_prazo_devolucao_dias CHECK (dias BETWEEN 1 AND 365)
+);
+--rollback DROP TABLE configuracao_prazo_devolucao;
+
+--changeset monitoolring:5-create-table-emprestimos
+--comment: Emprestimo criado na Retirada (FR-9/FR-11). dias_prazo guarda o prazo padrao vigente no momento da Retirada (FR-8) e prazo_devolucao = data_hora_retirada + dias_prazo dias corridos. status: ACTIVE (aberto), RETURNED (Devolucao, FR-13) ou LOST (Perda, FR-19); atraso e derivado em tempo real (FR-17), nao e status gravado. O indice unico parcial garante no banco no maximo um emprestimo ACTIVE por ferramenta (consistencia, PRD secao 5).
+CREATE TABLE emprestimos (
+    id                    VARCHAR(38)  NOT NULL,
+    id_ferramenta         VARCHAR(38)  NOT NULL,
+    id_membro             VARCHAR(38)  NOT NULL,
+    id_staff_retirada     VARCHAR(38)  NOT NULL,
+    data_hora_retirada    TIMESTAMP    NOT NULL,
+    dias_prazo            INTEGER      NOT NULL,
+    prazo_devolucao       TIMESTAMP    NOT NULL,
+    status                VARCHAR(20)  NOT NULL,
+    CONSTRAINT pk_emprestimos PRIMARY KEY (id),
+    CONSTRAINT fk_emprestimos_ferramenta FOREIGN KEY (id_ferramenta) REFERENCES ferramentas (id),
+    CONSTRAINT fk_emprestimos_membro FOREIGN KEY (id_membro) REFERENCES usuarios (id),
+    CONSTRAINT fk_emprestimos_staff_retirada FOREIGN KEY (id_staff_retirada) REFERENCES usuarios (id),
+    CONSTRAINT ck_emprestimos_dias_prazo CHECK (dias_prazo >= 1),
+    CONSTRAINT ck_emprestimos_prazo_devolucao CHECK (prazo_devolucao > data_hora_retirada),
+    CONSTRAINT ck_emprestimos_status CHECK (status IN ('ACTIVE', 'RETURNED', 'LOST'))
+);
+CREATE UNIQUE INDEX uq_emprestimos_ferramenta_ativo ON emprestimos (id_ferramenta) WHERE status = 'ACTIVE';
+CREATE INDEX ix_emprestimos_membro ON emprestimos (id_membro);
+--rollback DROP TABLE emprestimos;
+
+--changeset monitoolring:6-create-table-checklists
+--comment: Checklist de Conservacao (Glossario, FR-10/FR-14), imutavel e vinculado ao emprestimo. tipo CHECKOUT (Retirada) ou RETURN (Devolucao, rodada futura); no maximo um de cada tipo por emprestimo. Acessorios inclusos ficam em checklist_acessorios, na ordem informada.
+CREATE TABLE checklists (
+    id                    VARCHAR(38)   NOT NULL,
+    id_emprestimo         VARCHAR(38)   NOT NULL,
+    tipo                  VARCHAR(20)   NOT NULL,
+    estado_funcional      VARCHAR(20)   NOT NULL,
+    avarias_visiveis      VARCHAR(2000) NOT NULL,
+    id_usuario_registro   VARCHAR(38)   NOT NULL,
+    data_hora_registro    TIMESTAMP     NOT NULL,
+    CONSTRAINT pk_checklists PRIMARY KEY (id),
+    CONSTRAINT fk_checklists_emprestimo FOREIGN KEY (id_emprestimo) REFERENCES emprestimos (id),
+    CONSTRAINT uq_checklists_emprestimo_tipo UNIQUE (id_emprestimo, tipo),
+    CONSTRAINT ck_checklists_tipo CHECK (tipo IN ('CHECKOUT', 'RETURN')),
+    CONSTRAINT ck_checklists_estado_funcional CHECK (estado_funcional IN ('INTACT', 'DEFECTIVE'))
+);
+CREATE TABLE checklist_acessorios (
+    id_checklist          VARCHAR(38)  NOT NULL,
+    ordem                 INTEGER      NOT NULL,
+    descricao             VARCHAR(255) NOT NULL,
+    CONSTRAINT pk_checklist_acessorios PRIMARY KEY (id_checklist, ordem),
+    CONSTRAINT fk_checklist_acessorios_checklist FOREIGN KEY (id_checklist) REFERENCES checklists (id)
+);
+--rollback DROP TABLE checklist_acessorios;
+--rollback DROP TABLE checklists;

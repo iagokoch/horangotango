@@ -39,6 +39,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/staff", "/api/staff/**").hasRole(STAFF)
                         .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/**").hasAnyRole(MEMBER, STAFF)
                         .requestMatchers("/api/tools", "/api/tools/**").hasRole(STAFF)
+                        .requestMatchers("/api/settings", "/api/settings/**").hasRole(STAFF)
+                        .requestMatchers(HttpMethod.GET, "/api/loans/**").hasAnyRole(MEMBER, STAFF)
+                        .requestMatchers("/api/loans", "/api/loans/**").hasRole(STAFF)
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e

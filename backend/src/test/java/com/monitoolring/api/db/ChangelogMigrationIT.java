@@ -23,7 +23,9 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 /**
  * Garante que o changeset 3 (modelo de Ferramenta do PRD) aplica sem erro num banco que já tem
  * ferramentas no formato antigo (com quantidade), faz o backfill com os valores-sentinela e
- * que o rollback volta ao formato anterior. Usa um Postgres próprio, isolado do banco dos ITs.
+ * que o rollback volta ao formato anterior. Em seguida aplica o restante do changelog sobre esse
+ * banco com dados e verifica o rollback dos changesets 4 a 6. Usa um Postgres próprio, isolado do
+ * banco dos ITs.
  */
 class ChangelogMigrationIT {
 
@@ -47,8 +49,11 @@ class ChangelogMigrationIT {
                             + "data_hora_criacao, id_usuario_alteracao, data_hora_alteracao, versao) VALUES "
                             + "('legacy-1', 'LEG-1', 'Martelo antigo', 3, 'u', now(), 'u', now(), 0)");
                 }
+                // o JdbcConnection do Liquibase desliga o autocommit
+                commitIfNeeded(connection);
 
-                liquibase.update(new Contexts(), new LabelExpression());
+                // aplica só o changeset 3 (os seguintes são cobertos mais abaixo)
+                liquibase.update(1, new Contexts(), new LabelExpression());
 
                 try (Statement st = connection.createStatement();
                         ResultSet rs = st.executeQuery("SELECT categoria, valor_estimado, estado_conservacao, status "
@@ -71,7 +76,33 @@ class ChangelogMigrationIT {
                     assertThat(rs.next()).isTrue();
                     assertThat(rs.getInt("quantidade")).isEqualTo(1);
                 }
+
+                // changesets 4-6 (prazo, empréstimos, checklists) sobre o banco com a ferramenta legada
+                liquibase.update(new Contexts(), new LabelExpression());
+                assertThat(tables(connection)).contains("configuracao_prazo_devolucao", "emprestimos",
+                        "checklists", "checklist_acessorios");
+
+                liquibase.rollback(3, (String) null);
+                assertThat(tables(connection)).doesNotContain("configuracao_prazo_devolucao", "emprestimos",
+                        "checklists", "checklist_acessorios");
+                assertThat(columns(connection)).contains("status");
             }
+        }
+    }
+
+    private static List<String> tables(Connection connection) throws Exception {
+        List<String> tables = new ArrayList<>();
+        try (ResultSet rs = connection.getMetaData().getTables(null, "public", "%", new String[] {"TABLE"})) {
+            while (rs.next()) {
+                tables.add(rs.getString("TABLE_NAME"));
+            }
+        }
+        return tables;
+    }
+
+    private static void commitIfNeeded(Connection connection) throws Exception {
+        if (!connection.getAutoCommit()) {
+            connection.commit();
         }
     }
 

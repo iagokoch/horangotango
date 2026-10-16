@@ -11,11 +11,22 @@ package com.monitoolring.api.domain;
  * </ul>
  */
 public enum ToolStatus {
-    AVAILABLE,
-    ON_LOAN,
-    UNDER_REPAIR,
-    LOST,
-    INACTIVE;
+    AVAILABLE("disponível"),
+    ON_LOAN("emprestada"),
+    UNDER_REPAIR("em reparo/inspeção"),
+    LOST("perdida"),
+    INACTIVE("inativa");
+
+    private final String rotulo;
+
+    ToolStatus(String rotulo) {
+        this.rotulo = rotulo;
+    }
+
+    /** Nome do status no vocabulário do PRD, para mensagens ao usuário. */
+    public String getRotulo() {
+        return rotulo;
+    }
 
     /**
      * Indica se Staff pode definir este status manualmente na edição da Ferramenta

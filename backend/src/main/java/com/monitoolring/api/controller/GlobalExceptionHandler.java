@@ -21,7 +21,14 @@ import com.monitoolring.api.dto.ErrorResponse;
 import com.monitoolring.api.exception.DuplicateToolCodigoException;
 import com.monitoolring.api.exception.DuplicateUserEmailException;
 import com.monitoolring.api.exception.InvalidCredentialsException;
+import com.monitoolring.api.exception.IncompleteChecklistException;
 import com.monitoolring.api.exception.InvalidToolStatusTransitionException;
+import com.monitoolring.api.exception.LoanAccessDeniedException;
+import com.monitoolring.api.exception.LoanNotFoundException;
+import com.monitoolring.api.exception.MemberNotFoundException;
+import com.monitoolring.api.exception.NotAMemberException;
+import com.monitoolring.api.exception.ReturnDeadlineNotConfiguredException;
+import com.monitoolring.api.exception.ToolNotAvailableException;
 import com.monitoolring.api.exception.ToolNotFoundException;
 import com.monitoolring.api.exception.ToolStatusConflictException;
 import com.monitoolring.api.exception.ToolVersionConflictException;
@@ -95,6 +102,49 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidToolStatus(InvalidToolStatusTransitionException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse.of(
                 HttpStatus.UNPROCESSABLE_ENTITY.value(), "Unprocessable Entity", ex.getMessage()));
+    }
+
+    /** Na confirmação de Retirada, prazo não configurado é violação de estado do sistema (FR-8): 409. */
+    @ExceptionHandler(ReturnDeadlineNotConfiguredException.class)
+    public ResponseEntity<ErrorResponse> handleReturnDeadlineNotConfigured(ReturnDeadlineNotConfiguredException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
+                HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ToolNotAvailableException.class)
+    public ResponseEntity<ErrorResponse> handleToolNotAvailable(ToolNotAvailableException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
+                HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IncompleteChecklistException.class)
+    public ResponseEntity<ErrorResponse> handleIncompleteChecklist(IncompleteChecklistException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse.of(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(), "Unprocessable Entity", ex.getMessage(), ex.getProblemas()));
+    }
+
+    @ExceptionHandler(NotAMemberException.class)
+    public ResponseEntity<ErrorResponse> handleNotAMember(NotAMemberException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse.of(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(), "Unprocessable Entity", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MemberNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleMemberNotFound(MemberNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LoanNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleLoanNotFound(LoanNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LoanAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleLoanAccessDenied(LoanAccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.of(
+                HttpStatus.FORBIDDEN.value(), "Forbidden", ex.getMessage()));
     }
 
     @ExceptionHandler(ToolNotFoundException.class)
