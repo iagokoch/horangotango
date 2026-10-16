@@ -23,7 +23,7 @@ public final class JwtTestTokenFactory {
                 .subject(userId)
                 .claim("role", role.name())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .expiration(new Date(System.currentTimeMillis() + 600_000))
                 .signWith(KEY)
                 .compact();
     }

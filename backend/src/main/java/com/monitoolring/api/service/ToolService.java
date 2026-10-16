@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.monitoolring.api.domain.Tool;
+import com.monitoolring.api.domain.ToolStatus;
 import com.monitoolring.api.dto.ToolCreateRequest;
 import com.monitoolring.api.dto.ToolUpdateRequest;
 import com.monitoolring.api.exception.DuplicateToolCodigoException;
@@ -17,6 +19,8 @@ import com.monitoolring.api.repository.ToolRepository;
 
 @Service
 public class ToolService {
+
+    private static final Sort CATALOG_ORDER = Sort.by("codigo");
 
     private final ToolRepository toolRepository;
 
@@ -29,12 +33,16 @@ public class ToolService {
 
         Instant now = Instant.now();
         Tool tool = Tool.criar(UUID.randomUUID().toString(), request.codigo(), request.nome(),
-                request.quantidade(), idUsuario, now);
+                request.categoria(), request.valorEstimado(), request.estadoConservacao(), idUsuario, now);
         return toolRepository.save(tool);
     }
 
-    public List<Tool> findAll() {
-        return toolRepository.findAll();
+    /** Catálogo ordenado por código; {@code status} nulo lista todas as Ferramentas. */
+    public List<Tool> findAll(ToolStatus status) {
+        if (status == null) {
+            return toolRepository.findAll(CATALOG_ORDER);
+        }
+        return toolRepository.findByStatus(status, CATALOG_ORDER);
     }
 
     public Tool findById(String id) {
@@ -45,19 +53,17 @@ public class ToolService {
     public Tool update(String id, ToolUpdateRequest request, String idUsuario) {
         Tool tool = findById(id);
         assertVersionMatches(tool, request.versao());
-        assertCodigoAvailableForOtherTool(request.codigo(), id);
+        if (request.codigo() != null) {
+            assertCodigoAvailableForOtherTool(request.codigo(), id);
+        }
 
-        tool.aplicarEdicao(request.codigo(), request.nome(), request.quantidade(), idUsuario, Instant.now());
+        tool.aplicarEdicao(new Tool.ToolEdit(request.codigo(), request.nome(), request.categoria(),
+                request.valorEstimado(), request.estadoConservacao(), request.status()), idUsuario, Instant.now());
         try {
             return toolRepository.saveAndFlush(tool);
         } catch (OptimisticLockingFailureException ex) {
             throw new ToolVersionConflictException(id, request.versao(), tool.getVersao());
         }
-    }
-
-    public void delete(String id) {
-        Tool tool = findById(id);
-        toolRepository.delete(tool);
     }
 
     private void assertCodigoAvailable(String codigo) {

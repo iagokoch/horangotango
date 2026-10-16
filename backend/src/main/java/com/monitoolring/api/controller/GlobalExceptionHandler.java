@@ -17,7 +17,9 @@ import com.monitoolring.api.dto.ErrorResponse;
 import com.monitoolring.api.exception.DuplicateToolCodigoException;
 import com.monitoolring.api.exception.DuplicateUserEmailException;
 import com.monitoolring.api.exception.InvalidCredentialsException;
+import com.monitoolring.api.exception.InvalidToolStatusTransitionException;
 import com.monitoolring.api.exception.ToolNotFoundException;
+import com.monitoolring.api.exception.ToolStatusConflictException;
 import com.monitoolring.api.exception.ToolVersionConflictException;
 
 @RestControllerAdvice
@@ -73,8 +75,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateToolCodigoException.class)
     public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateToolCodigoException ex) {
-        return ResponseEntity.badRequest().body(ErrorResponse.of(
-                HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
+                HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ToolStatusConflictException.class)
+    public ResponseEntity<ErrorResponse> handleToolStatusConflict(ToolStatusConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
+                HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidToolStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidToolStatus(InvalidToolStatusTransitionException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse.of(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(), "Unprocessable Entity", ex.getMessage()));
     }
 
     @ExceptionHandler(ToolNotFoundException.class)

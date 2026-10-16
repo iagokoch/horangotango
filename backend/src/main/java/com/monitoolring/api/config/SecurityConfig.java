@@ -20,6 +20,7 @@ import com.monitoolring.api.security.JwtAuthenticationFilter;
 public class SecurityConfig {
 
     private static final String STAFF = UserRole.STAFF.name();
+    private static final String MEMBER = UserRole.MEMBER.name();
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter,
@@ -36,6 +37,8 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers("/api/staff", "/api/staff/**").hasRole(STAFF)
+                        .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/**").hasAnyRole(MEMBER, STAFF)
+                        .requestMatchers("/api/tools", "/api/tools/**").hasRole(STAFF)
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e

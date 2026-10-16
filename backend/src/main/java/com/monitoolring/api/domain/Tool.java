@@ -1,9 +1,15 @@
 package com.monitoolring.api.domain;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+
+import com.monitoolring.api.exception.InvalidToolStatusTransitionException;
+import com.monitoolring.api.exception.ToolStatusConflictException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -22,8 +28,18 @@ public class Tool {
     @Column(name = "nome", length = 255, nullable = false)
     private String nome;
 
-    @Column(name = "quantidade", nullable = false)
-    private int quantidade;
+    @Column(name = "categoria", length = 100, nullable = false)
+    private String categoria;
+
+    @Column(name = "valor_estimado", precision = 12, scale = 2, nullable = false)
+    private BigDecimal valorEstimado;
+
+    @Column(name = "estado_conservacao", length = 1000, nullable = false)
+    private String estadoConservacao;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
+    private ToolStatus status;
 
     @Column(name = "id_usuario_criacao", length = 38, nullable = false, updatable = false)
     private String idUsuarioCriacao;
@@ -45,27 +61,68 @@ public class Tool {
         // exigido pelo JPA
     }
 
-    private Tool(String id, String codigo, String nome, int quantidade, String idUsuario, Instant now) {
+    private Tool(String id, String codigo, String nome, String categoria, BigDecimal valorEstimado,
+            String estadoConservacao, String idUsuario, Instant now) {
         this.id = id;
         this.codigo = codigo;
         this.nome = nome;
-        this.quantidade = quantidade;
+        this.categoria = categoria;
+        this.valorEstimado = valorEstimado;
+        this.estadoConservacao = estadoConservacao;
+        this.status = ToolStatus.AVAILABLE;
         this.idUsuarioCriacao = idUsuario;
         this.dataHoraCriacao = now;
         this.idUsuarioAlteracao = idUsuario;
         this.dataHoraAlteracao = now;
     }
 
-    public static Tool criar(String id, String codigo, String nome, int quantidade, String idUsuario, Instant now) {
-        return new Tool(id, codigo, nome, quantidade, idUsuario, now);
+    /** Cadastra uma Ferramenta; toda Ferramenta nasce com status AVAILABLE (FR-3). */
+    public static Tool criar(String id, String codigo, String nome, String categoria, BigDecimal valorEstimado,
+            String estadoConservacao, String idUsuario, Instant now) {
+        return new Tool(id, codigo, nome, categoria, valorEstimado, estadoConservacao, idUsuario, now);
     }
 
-    public void aplicarEdicao(String codigo, String nome, int quantidade, String idUsuario, Instant now) {
-        this.codigo = codigo;
-        this.nome = nome;
-        this.quantidade = quantidade;
+    /**
+     * Edição parcial (PATCH): campos nulos permanecem como estão. A mudança de status é validada antes
+     * de qualquer alteração: só AVAILABLE/INACTIVE podem ser definidos manualmente e uma Ferramenta
+     * emprestada não muda de status pela edição (FR-4).
+     */
+    public void aplicarEdicao(ToolEdit edicao, String idUsuario, Instant now) {
+        if (edicao.status() != null && edicao.status() != this.status) {
+            assertTransicaoManualPermitida(edicao.status());
+            this.status = edicao.status();
+        }
+        if (edicao.codigo() != null) {
+            this.codigo = edicao.codigo();
+        }
+        if (edicao.nome() != null) {
+            this.nome = edicao.nome();
+        }
+        if (edicao.categoria() != null) {
+            this.categoria = edicao.categoria();
+        }
+        if (edicao.valorEstimado() != null) {
+            this.valorEstimado = edicao.valorEstimado();
+        }
+        if (edicao.estadoConservacao() != null) {
+            this.estadoConservacao = edicao.estadoConservacao();
+        }
         this.idUsuarioAlteracao = idUsuario;
         this.dataHoraAlteracao = now;
+    }
+
+    private void assertTransicaoManualPermitida(ToolStatus novo) {
+        if (!novo.isManuallyAssignable()) {
+            throw new InvalidToolStatusTransitionException(novo);
+        }
+        if (this.status == ToolStatus.ON_LOAN) {
+            throw new ToolStatusConflictException(this.codigo);
+        }
+    }
+
+    /** Valores da edição parcial; {@code null} significa "não alterar". */
+    public record ToolEdit(String codigo, String nome, String categoria, BigDecimal valorEstimado,
+            String estadoConservacao, ToolStatus status) {
     }
 
     public String getId() {
@@ -80,8 +137,20 @@ public class Tool {
         return nome;
     }
 
-    public int getQuantidade() {
-        return quantidade;
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public BigDecimal getValorEstimado() {
+        return valorEstimado;
+    }
+
+    public String getEstadoConservacao() {
+        return estadoConservacao;
+    }
+
+    public ToolStatus getStatus() {
+        return status;
     }
 
     public String getIdUsuarioCriacao() {
