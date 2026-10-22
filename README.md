@@ -189,6 +189,10 @@ permissão, é `403`. Os dois voltam em JSON no formato `ErrorResponse`.
 Swagger com a aplicação no ar: `http://localhost:8080/swagger-ui.html` (JSON em
 `/v3/api-docs`). Para rotas protegidas, faça o login e use o botão **Authorize**.
 
+- [Engenharia de Requisitos — N2](backend/docs/requisitos-n2/README.md) —
+  documentação de visão e escopo, ERS, casos de uso, diagramas UML,
+  matriz de rastreabilidade e plano de continuidade para N3.
+
 ## Estrutura
 
 ```
