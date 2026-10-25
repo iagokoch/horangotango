@@ -1,0 +1,156 @@
+# Monitoolring — changelog candidato da v2.0 do backend
+
+Este documento reúne as mudanças do backend para a entrega individual da N2 e as
+pendências para a N3. A base de comparação é a branch `master` da N1, importada no
+monorepo, que já continha validação de JWT, JPA/PostgreSQL, Liquibase, MapStruct,
+Swagger e o CRUD inicial de ferramentas.
+
+## Estado da candidata
+
+Estado conferido em **25/10/2026**:
+
+- `main` remota em `149ec3d`: os **15 FRs do escopo N2** estão implementados.
+- O [PR de revisão da retirada e contratos da API](https://github.com/iagokoch/horangotango/pull/24)
+  está aberto, com correções de concorrência e ampliação de Swagger/Postman.
+- Este changelog é uma candidata. Antes da publicação, conferir a integração desse
+  PR e validar novamente a versão resultante da `main`.
+
+As evidências abaixo identificam o código em que foram obtidas. A criação de tag e
+release é uma etapa posterior, sujeita à autorização do responsável pela entrega.
+
+## Funcionalidades implementadas na main
+
+| Requisitos | Entrega do backend |
+|---|---|
+| FR-1 / FR-2 | Cadastro de Membro, login e emissão de JWT com papel/expiração; criação de Staff por Staff; bootstrap da primeira conta Staff |
+| FR-3 / FR-4 / FR-5 | Ferramenta individual com categoria, valor estimado, estado de conservação e cinco status; cadastro, edição parcial, inativação/reativação e catálogo filtrável |
+| FR-8 | Prazo padrão configurável por Staff, de 1 a 365 dias; prazo copiado para cada empréstimo, calculado em UTC como N × 24 horas |
+| FR-9 / FR-10 / FR-11 | Retirada confirmada por Staff, checklist obrigatório e imutável, cálculo de prazo e ferramenta marcada como `ON_LOAN` na mesma transação |
+| FR-12 / FR-17 / FR-18 | Atraso derivado em tempo real com `Clock`; bloqueio de nova retirada com `409` antes do checklist; liberação quando não restam empréstimos em atraso |
+| FR-13 / FR-14 / FR-16 | Devolução por Staff com checklist `RETURN`, auditoria de horário/Staff, consulta comparativa dos checklists e liberação da ferramenta como `AVAILABLE` |
+
+São **15 de 19 FRs** do PRD, aproximadamente 79%. Os quatro FRs restantes estão
+identificados na seção de continuidade para a N3.
+
+### Autenticação e autorização
+
+- `POST /api/auth/register` cria sempre um `MEMBER`; `POST /api/staff` exige `STAFF`.
+- Login devolve `token`, `tipo`, `expiraEm` e `usuario`. Respostas não expõem senha/hash.
+- JWT sem expiração é recusado. Login inválido não distingue e-mail inexistente de senha incorreta.
+- Logout responde `204`; o cliente descarta o token, que permanece válido até expirar.
+  Revogação no servidor permanece na N3.
+- Membro consulta somente seus próprios empréstimos e checklists; Staff consulta qualquer um.
+- CORS está integrado ao Spring Security, incluindo o preflight dos métodos utilizados.
+
+### Ferramentas e compatibilidade com a N1
+
+| Antes, na N1 | Na N2 |
+|---|---|
+| `POST /api/tools` respondia `200` | Responde `201`, com status inicial `AVAILABLE` |
+| Edição por `PUT` | Edição parcial por `PATCH`, com `versao` obrigatória |
+| Exclusão física por `DELETE` | Inativação por `PATCH`; métodos removidos recebem `405` após autorização |
+| Campo `quantidade` | Cada cadastro representa uma ferramenta individual |
+| Código repetido respondia `400` | Duplicidade responde `409` |
+
+O modelo de Ferramenta passa a exigir `categoria`, `valorEstimado` e
+`estadoConservacao`. A migração preserva ferramentas antigas com os valores
+sentinela `NAO_INFORMADA`, `0.01`, `Não informado (migração)` e status `AVAILABLE`;
+esses dados podem ser revisados pelo Staff.
+
+### Empréstimos, atraso e devolução
+
+- Retirada exige tomador Membro, ferramenta disponível e checklist completo.
+  Ausência de avarias/acessórios deve ser explícita, como `"Sem avarias"` e `["Nenhum"]`.
+- Um empréstimo está em atraso quando permanece `ACTIVE` e o instante do `Clock`
+  ultrapassa estritamente o `prazoDevolucao`. O atraso não é coluna nem job.
+- A recusa por atraso identifica todos os empréstimos pendentes, ferramentas e prazos
+  vencidos em `message` e `details`. Devolver apenas um de vários atrasos mantém o bloqueio.
+- A devolução recebe `{ "checklist": { ... } }`, registra `dataHoraDevolucao` e
+  `staffDevolucaoId` e encerra o empréstimo como `RETURNED`.
+- `GET /api/loans/{id}/checklists` retorna `emprestimoId`, `checklistRetirada` e
+  `checklistDevolucao`, nulo antes da devolução. Ambos permanecem consultáveis após
+  a ferramenta participar de um novo empréstimo.
+- Lock pessimista e índice único parcial protegem a retirada da mesma ferramenta.
+  Devoluções concorrentes do mesmo empréstimo resultam em um sucesso e um conflito.
+
+### Fronteira de erros
+
+| Código | Exemplos |
+|---|---|
+| `400` | JSON malformado, enum inválido, campo fora dos limites ou falha de Bean Validation |
+| `401` | Token ausente/inválido ou login inválido |
+| `403` | Papel sem permissão ou consulta de empréstimo de outro Membro |
+| `404` | Recurso inexistente; GET do prazo antes da primeira configuração |
+| `409` | Duplicidade, versão divergente, ferramenta indisponível, bloqueio por atraso, prazo não configurado na retirada ou empréstimo já encerrado |
+| `422` | Checklist incompleto, tomador Staff ou status não atribuível manualmente |
+| `500` | Erro inesperado com mensagem genérica e detalhe interno no log |
+
+Os erros tratados no MVC e nos handlers de segurança usam
+`ErrorResponse {timestamp, status, error, message, details}`. Erros de outros filtros
+do servlet ainda podem utilizar o formato padrão do Spring Boot.
+
+### Banco e testes
+
+- Liquibase mantém o master SQL único, com os changesets 1 a 7 e rollback.
+- Novos changesets da N2: usuários; modelo de Ferramenta; configuração de prazo;
+  empréstimos; checklists/acessórios; auditoria de devolução.
+- JPA valida o schema, sem substituir as migrations por geração automática.
+- `./mvnw test` inclui os testes `*IT`. Testcontainers 1.21.4 utiliza PostgreSQL
+  para verificar persistência, concorrência, aplicação e rollback das migrations.
+- Os ITs usuais compartilham o container singleton e usam dados únicos.
+  `ChangelogMigrationIT` utiliza banco isolado para aplicação e rollback.
+
+## Mudanças ainda em revisão no PR da retirada
+
+Estas mudanças estão no PR aberto, na branch `n2/revisao-retirada-api`, e ainda
+não fazem parte da `main` no estado registrado acima:
+
+1. Revalidar o bloqueio depois de obter o lock da ferramenta. Um vencimento durante
+   a espera passa a impedir a retirada com `409`.
+2. Ler novamente os dias vigentes diretamente no banco após a espera, evitando usar
+   configuração antiga do contexto de persistência. A alteração de 7 para 30 dias
+   durante a espera passa a valer para a nova retirada.
+3. Acrescentar dois testes com relógio controlável e lock real para esses cenários.
+4. Declarar os schemas de sucesso/erro de Settings e Loans no Swagger e ampliar a
+   coleção Postman para essas rotas, com documentação e status dos FRs atualizados.
+
+## Evidências já obtidas
+
+| Código validado | Verificação | Resultado registrado |
+|---|---|---|
+| Backend antes do PR, base `149ec3d` | `./mvnw test`, com JDK 21 e Docker | 181 testes, sem falhas ou erros |
+| Código do PR, consolidado em `0f49860` | `./mvnw test`, com JDK 21 e Docker | 183 testes, sem falhas ou erros |
+| Código do PR | Newman 6.2.3 em aplicação/banco temporários | Duas execuções de 71 requisições; 129 e 128 asserções aprovadas |
+| Código do PR | OpenAPI da aplicação em execução | 6 operações e 24 schemas de erro conferidos |
+
+Esses resultados são registros das verificações executadas durante o desenvolvimento.
+A validação final da release deve identificar o commit integrado que será entregue;
+`clean package` ainda pertence a essa etapa posterior.
+
+## Continuidade para a N3
+
+| Item | Situação de continuidade |
+|---|---|
+| FR-6 | Consulta de histórico de qualquer Membro por Staff |
+| FR-7 | Histórico dos próprios empréstimos e representação do Membro com bloqueio derivado |
+| FR-15 | Sinalização de divergência com justificativa e destino `UNDER_REPAIR` |
+| FR-19 | Registro de perda/furto e encerramento sem devolução física |
+| Treinamento prévio | Cadastro/verificação de treinamentos; adiado para N3 por decisão de escopo |
+| Multas | Cálculo automatizado por atraso |
+| Logout | Revogação de tokens no servidor |
+| Performance | Medição das metas e testes de carga |
+| LGPD | Revisão de minimização de dados, retenção e base legal |
+| Erros de filtros | Padronização do retorno fora do MVC em `ErrorResponse` |
+| Rotas inexistentes | Avaliação da política fora de `/api` e em prefixos restritos por papel; sob `/api`, com token e papel permitidos, já há `404` |
+
+O enum `LOST` já existe, mas não representa implementação do fluxo de perda.
+A devolução da N2 libera a ferramenta como `AVAILABLE`; sinalização de divergência
+e decisão de encaminhamento para reparo pertencem à N3.
+
+## Referências
+
+- [PRD](prd.md) e [convenções HTTP](api-convencoes-http.md).
+- [Nomenclatura da API](api-nomenclatura-recursos.md).
+- [Guia de testes manuais](testing-manual.md).
+- [Roteiro de demonstração do backend](roteiro-demonstracao-n2.md).
+- [Visão geral do projeto](../../README.md).
