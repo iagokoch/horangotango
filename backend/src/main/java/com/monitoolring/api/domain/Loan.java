@@ -3,6 +3,8 @@ package com.monitoolring.api.domain;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import com.monitoolring.api.exception.LoanAlreadyClosedException;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -44,6 +46,12 @@ public class Loan {
     @Column(name = "status", length = 20, nullable = false)
     private LoanStatus status;
 
+    @Column(name = "data_hora_devolucao")
+    private Instant dataHoraDevolucao;
+
+    @Column(name = "id_staff_devolucao", length = 38)
+    private String idStaffDevolucao;
+
     protected Loan() {
         // exigido pelo JPA
     }
@@ -65,6 +73,20 @@ public class Loan {
         loan.prazoDevolucao = dataHoraRetirada.plus(diasPrazo, ChronoUnit.DAYS);
         loan.status = LoanStatus.ACTIVE;
         return loan;
+    }
+
+    public void assertAtivo() {
+        if (status != LoanStatus.ACTIVE) {
+            throw new LoanAlreadyClosedException(id, status);
+        }
+    }
+
+    /** FR-13: encerra uma única vez e preserva os dados imutáveis da Retirada. */
+    public void registrarDevolucao(String idStaff, Instant agora) {
+        assertAtivo();
+        this.dataHoraDevolucao = agora;
+        this.idStaffDevolucao = idStaff;
+        this.status = LoanStatus.RETURNED;
     }
 
     public boolean pertenceAoMembro(String idUsuario) {
@@ -101,5 +123,13 @@ public class Loan {
 
     public LoanStatus getStatus() {
         return status;
+    }
+
+    public Instant getDataHoraDevolucao() {
+        return dataHoraDevolucao;
+    }
+
+    public String getIdStaffDevolucao() {
+        return idStaffDevolucao;
     }
 }

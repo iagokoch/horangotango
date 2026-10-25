@@ -24,6 +24,7 @@ import com.monitoolring.api.exception.InvalidCredentialsException;
 import com.monitoolring.api.exception.IncompleteChecklistException;
 import com.monitoolring.api.exception.InvalidToolStatusTransitionException;
 import com.monitoolring.api.exception.LoanAccessDeniedException;
+import com.monitoolring.api.exception.LoanAlreadyClosedException;
 import com.monitoolring.api.exception.LoanNotFoundException;
 import com.monitoolring.api.exception.MemberBlockedException;
 import com.monitoolring.api.exception.MemberNotFoundException;
@@ -140,6 +141,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMemberNotFound(MemberNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(), "Not Found", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LoanAlreadyClosedException.class)
+    public ResponseEntity<ErrorResponse> handleLoanAlreadyClosed(LoanAlreadyClosedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
+                HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
     }
 
     @ExceptionHandler(LoanNotFoundException.class)

@@ -127,6 +127,13 @@ public class Tool {
         this.dataHoraAlteracao = now;
     }
 
+    /** FR-16: a Devolução confirmada libera a Ferramenta e registra quem a confirmou. */
+    public void registrarDevolucao(String idUsuario, Instant now) {
+        this.status = ToolStatus.AVAILABLE;
+        this.idUsuarioAlteracao = idUsuario;
+        this.dataHoraAlteracao = now;
+    }
+
     private void assertTransicaoManualPermitida(ToolStatus novo) {
         if (!novo.isManuallyAssignable()) {
             throw new InvalidToolStatusTransitionException(novo);

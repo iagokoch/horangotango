@@ -19,6 +19,7 @@ import com.monitoolring.api.domain.User;
 import com.monitoolring.api.domain.UserRole;
 import com.monitoolring.api.dto.ChecklistRequest;
 import com.monitoolring.api.dto.LoanCreateRequest;
+import com.monitoolring.api.dto.LoanReturnRequest;
 import com.monitoolring.api.exception.LoanAccessDeniedException;
 import com.monitoolring.api.exception.LoanNotFoundException;
 import com.monitoolring.api.exception.MemberBlockedException;
@@ -93,7 +94,28 @@ public class LoanService {
         }
         Checklist checklist = checklistRepository.save(Checklist.criar(UUID.randomUUID().toString(), loan.getId(),
                 ChecklistType.CHECKOUT, dadosChecklist, idStaff, agora));
-        return new LoanDetails(loan, checklist);
+        return new LoanDetails(loan, checklist, null);
+    }
+
+    /** FR-13/FR-14/FR-16: encerra Empréstimo, grava Checklist RETURN e libera a Ferramenta atomicamente. */
+    @Transactional
+    public LoanDetails returnLoan(String id, LoanReturnRequest request, String idStaff) {
+        Loan loan = loanRepository.findByIdForUpdate(id).orElseThrow(() -> new LoanNotFoundException(id));
+        loan.assertAtivo();
+
+        Checklist.Dados dadosChecklist = toDados(request.checklist());
+        Checklist.validarPreenchimento(dadosChecklist);
+
+        Tool tool = toolRepository.findByIdForUpdate(loan.getIdFerramenta())
+                .orElseThrow(() -> new ToolNotFoundException(loan.getIdFerramenta()));
+        Instant agora = now();
+        loan.registrarDevolucao(idStaff, agora);
+        tool.registrarDevolucao(idStaff, agora);
+        Checklist checklistDevolucao = checklistRepository.save(Checklist.criar(UUID.randomUUID().toString(), id,
+                ChecklistType.RETURN, dadosChecklist, idStaff, agora));
+        Checklist checklistRetirada = checklistRepository.findByIdEmprestimoAndTipo(id, ChecklistType.CHECKOUT)
+                .orElse(null);
+        return new LoanDetails(loan, checklistRetirada, checklistDevolucao);
     }
 
     /** Staff vê qualquer Empréstimo; Membro só os próprios (FR-7) — 403 para os de outro Membro. */
@@ -105,7 +127,9 @@ public class LoanService {
         }
         Checklist checklistRetirada = checklistRepository.findByIdEmprestimoAndTipo(id, ChecklistType.CHECKOUT)
                 .orElse(null);
-        return new LoanDetails(loan, checklistRetirada);
+        Checklist checklistDevolucao = checklistRepository.findByIdEmprestimoAndTipo(id, ChecklistType.RETURN)
+                .orElse(null);
+        return new LoanDetails(loan, checklistRetirada, checklistDevolucao);
     }
 
     /**
@@ -140,6 +164,6 @@ public class LoanService {
                 checklist.acessoriosInclusos());
     }
 
-    public record LoanDetails(Loan loan, Checklist checklistRetirada) {
+    public record LoanDetails(Loan loan, Checklist checklistRetirada, Checklist checklistDevolucao) {
     }
 }

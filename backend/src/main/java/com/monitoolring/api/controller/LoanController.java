@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.monitoolring.api.dto.LoanCreateRequest;
+import com.monitoolring.api.dto.LoanChecklistsResponse;
 import com.monitoolring.api.dto.LoanResponse;
+import com.monitoolring.api.dto.LoanReturnRequest;
 import com.monitoolring.api.mapper.LoanMapper;
 import com.monitoolring.api.security.CurrentUserProvider;
 import com.monitoolring.api.service.LoanService;
@@ -22,8 +24,8 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/loans")
-@Tag(name = "Empréstimos", description = "Retirada de Ferramenta com Checklist de Conservação e Prazo de "
-        + "Devolução (FR-9, FR-10, FR-11)")
+@Tag(name = "Empréstimos", description = "Retirada e Devolução de Ferramenta com Checklists de Conservação "
+        + "e Prazo de Devolução")
 public class LoanController {
 
     private final LoanService loanService;
@@ -52,17 +54,40 @@ public class LoanController {
     public LoanResponse checkout(@Valid @RequestBody LoanCreateRequest request) {
         String idStaff = currentUserProvider.getCurrentUserId();
         LoanDetails details = loanService.checkout(request, idStaff);
-        return loanMapper.toResponse(details.loan(), details.checklistRetirada());
+        return loanMapper.toResponse(details.loan(), details.checklistRetirada(), details.checklistDevolucao());
     }
 
     @Operation(summary = "Detalha um Empréstimo (Membro próprio/Staff)",
             description = "Staff consulta qualquer Empréstimo; Membro só os próprios. Inclui prazoDevolucao, "
-                    + "status e o Checklist de Retirada. Respostas: 200, 401 sem token, 403 empréstimo de outro "
+                    + "status e os Checklists de Retirada e Devolução. Respostas: 200, 401 sem token, 403 empréstimo de outro "
                     + "Membro, 404 inexistente.")
     @GetMapping("/{id}")
     public LoanResponse findById(@PathVariable String id) {
         LoanDetails details = loanService.findById(id, currentUserProvider.getCurrentUserId(),
                 currentUserProvider.getCurrentUserRole());
-        return loanMapper.toResponse(details.loan(), details.checklistRetirada());
+        return loanMapper.toResponse(details.loan(), details.checklistRetirada(), details.checklistDevolucao());
+    }
+
+    @Operation(summary = "Confirma a Devolução de uma Ferramenta (Staff)",
+            description = "Corpo: checklist {estadoFuncional, avariasVisiveis, acessoriosInclusos[]}. "
+                    + "Checklist completo é obrigatório. Grava a devolução e seu Staff, encerra o empréstimo "
+                    + "como RETURNED e libera a ferramenta como AVAILABLE. Respostas: 200 representação atualizada; "
+                    + "400 formato inválido; 401 sem token; 403 sem papel STAFF; 404 empréstimo inexistente; "
+                    + "409 empréstimo já encerrado; 422 checklist ausente/incompleto. Divergência é escopo da N3.")
+    @PostMapping("/{id}/return")
+    public LoanResponse returnLoan(@PathVariable String id, @Valid @RequestBody LoanReturnRequest request) {
+        LoanDetails details = loanService.returnLoan(id, request, currentUserProvider.getCurrentUserId());
+        return loanMapper.toResponse(details.loan(), details.checklistRetirada(), details.checklistDevolucao());
+    }
+
+    @Operation(summary = "Consulta os Checklists de Retirada e Devolução (Membro próprio/Staff)",
+            description = "Retorna os dois registros lado a lado; checklistDevolucao é nulo antes da devolução. "
+                    + "Respostas: 200, 401 sem token, 403 empréstimo de outro Membro, 404 empréstimo inexistente.")
+    @GetMapping("/{id}/checklists")
+    public LoanChecklistsResponse findChecklists(@PathVariable String id) {
+        LoanDetails details = loanService.findById(id, currentUserProvider.getCurrentUserId(),
+                currentUserProvider.getCurrentUserRole());
+        return loanMapper.toChecklistsResponse(details.loan().getId(), details.checklistRetirada(),
+                details.checklistDevolucao());
     }
 }

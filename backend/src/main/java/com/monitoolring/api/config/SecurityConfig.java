@@ -40,6 +40,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/tools", "/api/tools/**").hasAnyRole(MEMBER, STAFF)
                         .requestMatchers("/api/tools", "/api/tools/**").hasRole(STAFF)
                         .requestMatchers("/api/settings", "/api/settings/**").hasRole(STAFF)
+                        .requestMatchers(HttpMethod.POST, "/api/loans/*/return").hasRole(STAFF)
+                        .requestMatchers(HttpMethod.GET, "/api/loans/*/checklists").hasAnyRole(MEMBER, STAFF)
                         .requestMatchers(HttpMethod.GET, "/api/loans/**").hasAnyRole(MEMBER, STAFF)
                         .requestMatchers("/api/loans", "/api/loans/**").hasRole(STAFF)
                         .requestMatchers("/api/**").authenticated()

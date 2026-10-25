@@ -13,6 +13,9 @@ public record LoanResponse(
         int diasPrazo,
         Instant prazoDevolucao,
         LoanStatus status,
-        ChecklistResponse checklistRetirada
+        ChecklistResponse checklistRetirada,
+        Instant dataHoraDevolucao,
+        String staffDevolucaoId,
+        ChecklistResponse checklistDevolucao
 ) {
 }
