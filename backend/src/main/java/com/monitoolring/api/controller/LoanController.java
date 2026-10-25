@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.monitoolring.api.dto.ErrorResponse;
 import com.monitoolring.api.dto.LoanCreateRequest;
 import com.monitoolring.api.dto.LoanChecklistsResponse;
 import com.monitoolring.api.dto.LoanResponse;
@@ -19,6 +20,10 @@ import com.monitoolring.api.service.LoanService;
 import com.monitoolring.api.service.LoanService.LoanDetails;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -46,9 +51,25 @@ public class LoanController {
                     + "data/hora da retirada, os dias do prazo padrão vigente e o prazoDevolucao (retirada + dias "
                     + "corridos), e a ferramenta passa a ON_LOAN. Respostas: 201 criado; 400 JSON malformado ou "
                     + "campo fora do formato; 401 sem token; 403 sem papel STAFF; 404 ferramenta ou membro "
-                    + "inexistente; 409 prazo padrão não configurado, ou ferramenta não disponível (status atual "
+                    + "inexistente; 409 prazo padrão não configurado, Membro bloqueado por atraso ou ferramenta não disponível (status atual "
                     + "na mensagem), inclusive retirada simultânea; 422 checklist ausente/incompleto (o que falta "
                     + "vem em details) ou membroId de uma conta Staff.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Operação concluída",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoanResponse.class))),
+            @ApiResponse(responseCode = "400", description = "JSON malformado ou campo fora do formato",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel ou dono sem permissão",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Ferramenta ou membro inexistente",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Prazo não configurado, membro em atraso ou ferramenta indisponível",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Checklist incompleto ou tomador Staff",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public LoanResponse checkout(@Valid @RequestBody LoanCreateRequest request) {
@@ -61,6 +82,16 @@ public class LoanController {
             description = "Staff consulta qualquer Empréstimo; Membro só os próprios. Inclui prazoDevolucao, "
                     + "status e os Checklists de Retirada e Devolução. Respostas: 200, 401 sem token, 403 empréstimo de outro "
                     + "Membro, 404 inexistente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Operação concluída",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoanResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel ou dono sem permissão",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Empréstimo inexistente",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping("/{id}")
     public LoanResponse findById(@PathVariable String id) {
         LoanDetails details = loanService.findById(id, currentUserProvider.getCurrentUserId(),
@@ -74,6 +105,22 @@ public class LoanController {
                     + "como RETURNED e libera a ferramenta como AVAILABLE. Respostas: 200 representação atualizada; "
                     + "400 formato inválido; 401 sem token; 403 sem papel STAFF; 404 empréstimo inexistente; "
                     + "409 empréstimo já encerrado; 422 checklist ausente/incompleto. Divergência é escopo da N3.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Operação concluída",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoanResponse.class))),
+            @ApiResponse(responseCode = "400", description = "JSON malformado ou campo fora do formato",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel ou dono sem permissão",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Empréstimo inexistente",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Empréstimo já encerrado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Checklist de devolução ausente ou incompleto",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/{id}/return")
     public LoanResponse returnLoan(@PathVariable String id, @Valid @RequestBody LoanReturnRequest request) {
         LoanDetails details = loanService.returnLoan(id, request, currentUserProvider.getCurrentUserId());
@@ -83,6 +130,16 @@ public class LoanController {
     @Operation(summary = "Consulta os Checklists de Retirada e Devolução (Membro próprio/Staff)",
             description = "Retorna os dois registros lado a lado; checklistDevolucao é nulo antes da devolução. "
                     + "Respostas: 200, 401 sem token, 403 empréstimo de outro Membro, 404 empréstimo inexistente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Operação concluída",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoanChecklistsResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel ou dono sem permissão",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Empréstimo inexistente",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping("/{id}/checklists")
     public LoanChecklistsResponse findChecklists(@PathVariable String id) {
         LoanDetails details = loanService.findById(id, currentUserProvider.getCurrentUserId(),

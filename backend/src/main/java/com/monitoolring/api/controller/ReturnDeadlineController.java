@@ -18,6 +18,10 @@ import com.monitoolring.api.security.CurrentUserProvider;
 import com.monitoolring.api.service.ReturnDeadlineService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -42,6 +46,16 @@ public class ReturnDeadlineController {
                     + "existe e a resposta é 404 com ErrorResponse explicando que é preciso configurá-lo via PUT "
                     + "(nesse estado nenhuma Retirada pode ser confirmada). Respostas: 200, 401 sem token, "
                     + "403 sem papel STAFF, 404 ainda não configurado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Operação concluída",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ReturnDeadlineResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel ou dono sem permissão",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Prazo padrão ainda não configurado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping
     public ReturnDeadlineResponse get() {
         return returnDeadlineMapper.toResponse(returnDeadlineService.getCurrent());
@@ -52,6 +66,16 @@ public class ReturnDeadlineController {
                     + "entre 1 e 365. A alteração vale só para Retiradas novas — Empréstimos já confirmados mantêm o "
                     + "prazo vigente na própria Retirada (FR-8). Respostas: 200 com o valor gravado, 400 corpo "
                     + "inválido, 401 sem token, 403 sem papel STAFF.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Operação concluída",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ReturnDeadlineResponse.class))),
+            @ApiResponse(responseCode = "400", description = "JSON malformado ou campo fora do formato",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Papel ou dono sem permissão",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PutMapping
     public ReturnDeadlineResponse put(@Valid @RequestBody ReturnDeadlineRequest request) {
         String idUsuario = currentUserProvider.getCurrentUserId();
