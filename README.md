@@ -1,220 +1,416 @@
-# Monitoolring — Backend
+# Monitoolring
 
-Backend do projeto Monitoolring: Java 21, Spring Boot 3, Maven.
+O **Monitoolring** organiza o empréstimo de ferramentas em um makerspace: identifica
+quem retirou cada ferramenta, registra seu estado de conservação e acompanha o prazo
+de devolução. Membros consultam o catálogo; o Staff confirma retiradas e devoluções.
 
-Este é o backend de um monorepo (`backend/` + `frontend/`), no repositório
-[iagokoch/horangotango](https://github.com/iagokoch/horangotango). Branch única: `main`.
+A regra crítica do projeto é: **quem tem empréstimo em atraso não pode retirar outra
+ferramenta até resolver todas as pendências**. A implementação desse bloqueio e do fluxo
+de devolução ainda está planejada para a N2; veja o [status dos requisitos](#status-dos-requisitos).
 
-É a entrega da **N2**, construída sobre o backend da N1. O que foi herdado, o que a N2
-acrescenta e o que fica para a N3 está em [O que mudou desde a N1](#o-que-mudou-desde-a-n1)
-e [Pendências para a N3](#pendências-para-a-n3).
+Este é o monorepo [iagokoch/horangotango](https://github.com/iagokoch/horangotango), com
+`backend/`, `frontend/` e documentação. O projeto acadêmico evolui em três entregas:
 
-## Stack
+- **N1:** base da API, importada da branch `master` do backend original.
+- **N2:** entrega individual de backend, com meta de **15 dos 19 requisitos funcionais**
+  do PRD (aproximadamente 79%). O frontend e os artefatos de requisitos são de outros integrantes.
+- **N3:** continuidade pela equipe, com os quatro FRs restantes e as evoluções documentadas.
 
-- Java 21
-- [Spring Boot 3](https://spring.io/projects/spring-boot) (Web, Validation, Security/JWT, Actuator, springdoc)
-- PostgreSQL + JPA/Hibernate, migrations com Liquibase
-- Maven (com Maven Wrapper)
+## Sumário
 
-## Pré-requisitos
+- [Domínio e ciclo da ferramenta](#domínio-e-ciclo-da-ferramenta)
+- [Estrutura do monorepo](#estrutura-do-monorepo)
+- [Status dos requisitos](#status-dos-requisitos)
+- [Backend](#backend)
+  - [Stack](#stack)
+  - [Pré-requisitos](#pré-requisitos)
+  - [Como iniciar](#como-iniciar)
+  - [Variáveis de ambiente](#variáveis-de-ambiente)
+  - [Testes e comandos úteis](#testes-e-comandos-úteis)
+  - [Autenticação e papéis](#autenticação-e-papéis)
+  - [Endpoints implementados](#endpoints-implementados)
+  - [Respostas de erro](#respostas-de-erro)
+  - [Swagger e Postman](#swagger-e-postman)
+  - [Estrutura de pacotes](#estrutura-de-pacotes)
+- [Frontend](#frontend)
+- [Documentação](#documentação)
+- [Fluxo do repositório](#fluxo-do-repositório)
+- [O que mudou desde a N1](#o-que-mudou-desde-a-n1)
+- [Pendências para a N3](#pendências-para-a-n3)
 
-- JDK 21+
-- **Docker** — a API não sobe sem um Postgres acessível (o Liquibase roda as migrations no
-  start), e os testes de integração usam Testcontainers
-- Não é necessário ter o Maven instalado — o projeto usa o Maven Wrapper (`mvnw` / `mvnw.cmd`)
+## Domínio e ciclo da ferramenta
 
-> **`JAVA_HOME` apontando para o JDK 21.** O wrapper usa o `JAVA_HOME` e, se ele não estiver
-> definido, o `java` do PATH. Em máquinas com um Java antigo no PATH (ex.: o Java 8 que o
-> instalador da Oracle coloca em `C:\Program Files (x86)\Common Files\Oracle\Java`), o build
-> falha. Confira com `./mvnw -v` (linha `Java version:`) e, se não for 21, aponte o
-> `JAVA_HOME` no mesmo terminal em que vai rodar o wrapper:
->
-> ```bash
-> export JAVA_HOME="$HOME/.jdks/ms-21.0.12.1"        # Linux/macOS/Git Bash (exemplo de caminho)
-> ```
->
-> ```powershell
-> $env:JAVA_HOME="$HOME\.jdks\ms-21.0.12.1"          # Windows PowerShell (exemplo de caminho)
-> ```
->
-> `~/.jdks/` é onde o IntelliJ instala os JDKs que baixa. Use o caminho do seu JDK 21.
+| Termo | Significado |
+|---|---|
+| Membro (`MEMBER`) | Pessoa cadastrada que consulta ferramentas e toma empréstimos |
+| Staff (`STAFF`) | Responsável pela oficina; cadastra ferramentas e confirma as operações no balcão |
+| Ferramenta | Bem cadastrado individualmente, com código, nome, categoria, valor estimado e estado de conservação |
+| Disponível (`AVAILABLE`) | Ferramenta que pode ser retirada |
+| Emprestada (`ON_LOAN`) | Ferramenta vinculada a um empréstimo ativo |
+| Em reparo/inspeção (`UNDER_REPAIR`) | Ferramenta retirada de circulação após divergência na devolução; fluxo previsto para N3 |
+| Perdida (`LOST`) | Ferramenta com perda ou furto registrado; fluxo previsto para N3 |
+| Inativa (`INACTIVE`) | Ferramenta fora de circulação por decisão do Staff |
+| Empréstimo | Vínculo entre ferramenta, membro e Staff, com data de retirada e prazo de devolução |
+| Retirada | Confirmação pelo Staff que abre o empréstimo e marca a ferramenta como emprestada |
+| Devolução | Confirmação pelo Staff que encerra o empréstimo e registra a conferência da ferramenta |
+| Checklist de Conservação | Registro imutável do estado funcional, avarias visíveis e acessórios na retirada ou devolução |
+| Prazo de Devolução | Data e hora limite calculadas a partir do prazo padrão vigente na retirada |
+| Atraso | Empréstimo ainda não encerrado cuja data e hora limite já foram ultrapassadas |
+| Bloqueio por Inadimplência | Impedimento de nova retirada enquanto houver pelo menos um empréstimo em atraso |
+| Perda | Encerramento de empréstimo sem devolução física por perda, furto ou destruição da ferramenta (N3) |
 
-## Como iniciar
+O diagrama representa o **ciclo previsto**, incluindo funcionalidades ainda não implementadas.
+A retirada já está na `main`; a devolução está planejada para N2; divergência e perda são N3.
 
-1. Clone o repositório e entre na pasta do backend:
+```mermaid
+stateDiagram-v2
+    [*] --> AVAILABLE: Cadastro
+    AVAILABLE --> ON_LOAN: Retirada confirmada
+    ON_LOAN --> AVAILABLE: Devolução sem divergência (planejada N2)
+    ON_LOAN --> UNDER_REPAIR: Devolução com divergência (N3)
+    ON_LOAN --> LOST: Registro de perda ou furto (N3)
+    AVAILABLE --> INACTIVE: Inativação por Staff
+    INACTIVE --> AVAILABLE: Reativação por Staff
+    UNDER_REPAIR --> AVAILABLE: Liberação por Staff
+    UNDER_REPAIR --> INACTIVE: Inativação por Staff
+    LOST --> AVAILABLE: Recuperação e liberação por Staff
+    LOST --> INACTIVE: Inativação por Staff
+```
+
+Os cinco valores de `ToolStatus` já existem no backend. O `PATCH` permite atribuir apenas
+`AVAILABLE` ou `INACTIVE` e rejeita a mudança de status de uma ferramenta `ON_LOAN` com
+`409`. Os outros estados são definidos pelos fluxos de negócio. O empréstimo usa os valores
+`ACTIVE`, `RETURNED` e `LOST`; o atraso será derivado em tempo real, sem coluna própria nem job.
+
+## Estrutura do monorepo
+
+```text
+horangotango/
+├── README.md                         # Visão geral, execução e andamento do projeto
+├── backend/                          # API Java/Spring Boot e testes
+│   ├── pom.xml
+│   ├── mvnw / mvnw.cmd                # Maven Wrapper
+│   ├── docker-compose.yml            # PostgreSQL local na porta 5433
+│   ├── src/main/                     # Código, configuração e migrations
+│   ├── src/test/                     # Testes unitários e de integração
+│   └── docs/                         # PRD, contratos da API e guia de testes
+│       ├── postman/                  # Coleção Postman
+│       └── requisitos-n2/            # Artefatos de Engenharia de Requisitos
+└── frontend/                         # Área de outro integrante; apenas clear.md no estado atual
+```
+
+## Status dos requisitos
+
+A referência é o [PRD](backend/docs/prd.md). **✅ na `main`** indica código implementado;
+**📋 planejado na N2** indica trabalho restante desta entrega; **➡️ N3** indica escopo
+reservado para a continuidade. Uma issue aberta não significa, por si só, ausência de código.
+
+| FR | Requisito | Status | Issue |
+|---|---|---|---|
+| FR-1 | Cadastro e login de Membro | ✅ na `main` | [#1](https://github.com/iagokoch/horangotango/issues/1) |
+| FR-2 | Cadastro e login de Responsável da Oficina (Staff) | ✅ na `main` | [#1](https://github.com/iagokoch/horangotango/issues/1) |
+| FR-3 | Cadastro de Ferramenta | ✅ na `main` | [#2](https://github.com/iagokoch/horangotango/issues/2) |
+| FR-4 | Edição e inativação de Ferramenta | ✅ na `main` | [#2](https://github.com/iagokoch/horangotango/issues/2) |
+| FR-5 | Consulta de disponibilidade | ✅ na `main` | [#2](https://github.com/iagokoch/horangotango/issues/2) |
+| FR-6 | Consulta de histórico de Membro (Staff) | ➡️ N3 | [#13](https://github.com/iagokoch/horangotango/issues/13) |
+| FR-7 | Consulta dos próprios Empréstimos (Membro) | ➡️ N3 | [#14](https://github.com/iagokoch/horangotango/issues/14) |
+| FR-8 | Configuração do prazo padrão de devolução | ✅ na `main` | [#3](https://github.com/iagokoch/horangotango/issues/3) |
+| FR-9 | Solicitação de Retirada | ✅ na `main` | [#4](https://github.com/iagokoch/horangotango/issues/4) |
+| FR-10 | Checklist de Conservação na Retirada | ✅ na `main` | [#4](https://github.com/iagokoch/horangotango/issues/4) |
+| FR-11 | Confirmação de Retirada e prazo de devolução | ✅ na `main` | [#4](https://github.com/iagokoch/horangotango/issues/4) |
+| FR-12 | Bloqueio de Retirada por Inadimplência (RN Crítica) | 📋 planejado na N2 | [#5](https://github.com/iagokoch/horangotango/issues/5) |
+| FR-13 | Registro de Devolução | 📋 planejado na N2 | [#6](https://github.com/iagokoch/horangotango/issues/6) |
+| FR-14 | Checklist de Conservação na Devolução | 📋 planejado na N2 | [#6](https://github.com/iagokoch/horangotango/issues/6) |
+| FR-15 | Fluxo de decisão em divergência de Checklist | ➡️ N3 | [#15](https://github.com/iagokoch/horangotango/issues/15) |
+| FR-16 | Atualização de disponibilidade pós-Devolução | 📋 planejado na N2 | [#6](https://github.com/iagokoch/horangotango/issues/6) |
+| FR-17 | Marcação automática de Atraso | 📋 planejado na N2 | [#5](https://github.com/iagokoch/horangotango/issues/5) |
+| FR-18 | Liberação automática de Bloqueio | 📋 planejado na N2 | [#5](https://github.com/iagokoch/horangotango/issues/5) |
+| FR-19 | Registro de Perda de Ferramenta | ➡️ N3 | [#16](https://github.com/iagokoch/horangotango/issues/16) |
+
+Estado atual: **9 FRs implementados**, **6 planejados para completar os 15 da N2** e **4 para
+N3**. A meta de 15 requisitos representa o escopo da entrega, não a quantidade já concluída.
+
+Backlog por entrega: [N2 — v2.0](https://github.com/iagokoch/horangotango/milestone/1) e
+[N3](https://github.com/iagokoch/horangotango/milestone/2). A cobertura dos FRs acima se refere
+ao backend; o frontend tem implementação separada.
+
+## Backend
+
+### Stack
+
+- Java 21 e Spring Boot **3.3.2**: Web, Validation, Security e Actuator.
+- PostgreSQL **16** no Compose, JPA/Hibernate e migrations com Liquibase.
+- JWT stateless com jjwt **0.12.6**, papéis `MEMBER`/`STAFF` e senhas com BCrypt.
+- MapStruct **1.6.3** para conversão entre entidades e DTOs.
+- springdoc **2.6.0** para OpenAPI/Swagger.
+- Maven Wrapper, testes com JUnit e Testcontainers **1.21.4**.
+
+### Pré-requisitos
+
+- JDK **21**, com `JAVA_HOME` apontando para essa instalação.
+- Docker em execução para o Postgres local e para os testes de integração.
+- Git; o Maven não precisa ser instalado, pois o projeto tem Wrapper.
+
+Os comandos abaixo usam **Git Bash no Windows**. Na máquina de desenvolvimento, o Java do
+`PATH` é 1.8; configure o JDK 21 no mesmo terminal antes de qualquer comando Maven:
+
+```bash
+export JAVA_HOME="$HOME/.jdks/ms-21.0.12.1"
+```
+
+Use o caminho da sua instalação de JDK 21 quando ele for diferente. `~/.jdks/` é o diretório
+usado pelo IntelliJ para os JDKs baixados. De dentro de `backend/`, `./mvnw -v` mostra a versão
+usada pelo Wrapper.
+
+### Como iniciar
+
+1. Clone o repositório e entre no backend:
 
    ```bash
    git clone https://github.com/iagokoch/horangotango.git
    cd horangotango/backend
+   export JAVA_HOME="$HOME/.jdks/ms-21.0.12.1"
    ```
 
-2. Suba o Postgres:
+2. Suba o Postgres local:
 
    ```bash
    docker compose up -d
    ```
 
-   O compose publica o Postgres na porta **5433** do host (a 5432 costuma estar ocupada
-   por uma instalação local).
+   O Compose publica a porta **5433** do host para a 5432 do container, evitando conflito
+   com uma instalação local de Postgres.
 
-3. Aponte a aplicação para essa porta. O `application.yml` usa
-   `${DB_URL:jdbc:postgresql://localhost:5432/monitoolring}`, ou seja, a variável de
-   ambiente vence o valor padrão:
+3. Aponte a aplicação para essa porta e inicie a API no mesmo terminal:
 
    ```bash
-   export DB_URL="jdbc:postgresql://localhost:5433/monitoolring"   # Linux/macOS
-   ```
-
-   ```powershell
-   $env:DB_URL="jdbc:postgresql://localhost:5433/monitoolring"     # Windows PowerShell
-   ```
-
-   A variável vale só para aquela janela de terminal. Diferença de porta entre máquinas se
-   resolve assim — não editando o `application.yml`, que é versionado.
-
-4. Suba a aplicação, no mesmo terminal:
-
-   ```bash
+   export DB_URL="jdbc:postgresql://localhost:5433/monitoolring"
    ./mvnw spring-boot:run
    ```
 
-   No Windows (PowerShell), `./mvnw` também funciona, de dentro de `backend/`.
+   O padrão de `DB_URL` no `application.yml` usa a porta 5432; a variável de ambiente
+   substitui esse valor. Não é preciso editar o arquivo versionado.
 
-5. Verifique se a API está no ar:
+4. Confira a API:
 
-   ```
-   GET http://localhost:8080/api/health
+   ```bash
+   curl http://localhost:8080/api/health
    ```
 
    Esperado: `200` com `{"status":"UP","service":"monitoolring-api","timestamp":"..."}`.
+   No PowerShell, use `curl.exe`, pois `curl` pode ser um apelido de `Invoke-WebRequest`.
+   Para enviar JSON com acentos no Windows, prefira um arquivo UTF-8 com `--data-binary @corpo.json`.
 
-   > No PowerShell, `curl` é apelido de `Invoke-WebRequest` e lança erro em respostas 4xx.
-   > Para testar rotas manualmente use `curl.exe`.
+5. Faça login como Staff, configure o prazo em `PUT /api/settings/return-deadline` e então
+   cadastre membros e ferramentas para confirmar retiradas. A primeira conta Staff vem do
+   bootstrap; veja [Autenticação e papéis](#autenticação-e-papéis).
 
-6. Teste as rotas. Na primeira subida o bootstrap cria o primeiro Staff
-   (`staff@monitoolring.local` / `change-me-dev-only` em dev; ver
-   [Autenticação](#autenticação-e-papéis)). O caminho mais rápido é a coleção Postman
-   [`backend/docs/postman/monitoolring.postman_collection.json`](backend/docs/postman/monitoolring.postman_collection.json),
-   explicada em [`backend/docs/testing-manual.md`](backend/docs/testing-manual.md):
+### Variáveis de ambiente
 
-   ```bash
-   npx newman run docs/postman/monitoolring.postman_collection.json
-   ```
+Defina as variáveis no terminal antes de iniciar a aplicação. Os valores padrão de senha
+e segredo em `application.yml` e no Compose são exclusivamente de desenvolvimento.
 
-## Variáveis de ambiente
-
-Todas têm valor padrão no `application.yml`. Os padrões de segredo e senha servem **só para
-desenvolvimento**.
-
-| Variável | Padrão | Para que serve |
+| Variável | Padrão | Uso |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/monitoolring` | JDBC do Postgres. Com o `docker compose` deste repo, use a porta `5433` |
-| `DB_USER` / `DB_PASSWORD` | `monitoolring` / `monitoolring` | Credenciais do banco (as mesmas do compose) |
-| `JWT_SECRET` | `change-me-in-prod-please-use-a-real-secret-min-32-bytes` | Segredo HMAC (HS256) que assina e valida os tokens. Mínimo de 32 bytes |
-| `JWT_EXPIRATION` | `PT8H` | Validade do token emitido no login. Aceita ISO-8601 (`PT8H`, `PT30M`) ou o formato do Spring (`8h`, `30m`) |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/monitoolring` | Endereço JDBC; com o Compose, use a porta `5433` |
+| `DB_USER` / `DB_PASSWORD` | Valores locais definidos no Compose e em `application.yml` | Credenciais do Postgres |
+| `JWT_SECRET` | Valor de desenvolvimento em `application.yml` | Segredo HMAC HS256 com pelo menos 32 bytes; defina um segredo próprio fora de desenvolvimento |
+| `JWT_EXPIRATION` | `PT8H` | Validade dos tokens; aceita duração ISO-8601 (`PT30M`) ou formato Spring (`30m`) |
 | `APP_BOOTSTRAP_STAFF_NOME` | `Staff Inicial (dev)` | Nome do primeiro Staff |
-| `APP_BOOTSTRAP_STAFF_EMAIL` | `staff@monitoolring.local` | E-mail do primeiro Staff. Vazio desliga o bootstrap |
-| `APP_BOOTSTRAP_STAFF_PASSWORD` | `change-me-dev-only` | Senha do primeiro Staff (mínimo de 8 caracteres) |
+| `APP_BOOTSTRAP_STAFF_EMAIL` | `staff@monitoolring.local` | E-mail do primeiro Staff; vazio desliga o bootstrap |
+| `APP_BOOTSTRAP_STAFF_PASSWORD` | Senha de desenvolvimento em `application.yml` | Senha inicial do Staff; mínimo de 8 caracteres |
 
-Como no `DB_URL` do passo 3, defina a variável no terminal antes do `./mvnw spring-boot:run`.
-Não edite o `application.yml`.
+### Testes e comandos úteis
 
-## Comandos úteis
+Execute de dentro de `backend/`, com o Docker ligado para os testes:
 
-| Comando                  | Descrição                            |
-|---------------------------|--------------------------------------|
-| `./mvnw compile`          | Só compila — verificação mais rápida |
-| `./mvnw spring-boot:run`  | Sobe a aplicação em modo dev         |
-| `./mvnw test`             | Executa todos os testes (ver nota)   |
-| `./mvnw clean package`    | Gera o JAR em `target/`              |
-| `docker compose up -d`    | Sobe o Postgres local                |
-| `docker compose down`     | Derruba o Postgres local             |
-
-> **O que `./mvnw test` roda:** os testes unitários (`*Test`) e os de integração (`*IT` e
-> `ApiApplicationTests`). Os de integração sobem um Postgres próprio via Testcontainers, então
-> o Docker precisa estar rodando, mas o `docker compose` não. O Surefire está configurado
-> no `pom.xml` para incluir os `*IT`.
-
-> **Testcontainers e Docker 29:** com o Testcontainers 1.21.4 (versão atual do `pom.xml`) não
-> é preciso configurar nada. O erro antigo, *"Could not find a valid Docker environment"* com
-> o Docker rodando, vinha da versão de API: o Docker Engine 29 exige API ≥ 1.44 e o
-> Testcontainers 1.20.1, herdado da N1, negociava uma versão mais antiga. Se aparecer de novo,
-> confira a versão do `testcontainers-bom` antes de mexer em `~/.testcontainers.properties`.
-
-## Autenticação e papéis
-
-- **Contas.** `POST /api/auth/register` (público) cria sempre uma conta **MEMBER**: não há
-  autocadastro de Staff. Contas **STAFF** são criadas por outro Staff em `POST /api/staff`.
-  A exceção é o primeiro Staff, criado pelo bootstrap.
-- **Login.** `POST /api/auth/login` (público) devolve
-  `{"token", "tipo": "Bearer", "expiraEm", "usuario"}`. Credenciais erradas respondem `401`
-  com a mesma mensagem para e-mail inexistente e senha errada. Envie o token como
-  `Authorization: Bearer <token>`.
-- **Token.** JWT HS256 com `sub` (id do usuário), `role` (`MEMBER` ou `STAFF`), `iat` e `exp`.
-  A validade vem de `JWT_EXPIRATION` (padrão 8 h). Um token sem `exp`, sem `role`, com papel
-  desconhecido, com assinatura errada ou expirado é recusado com `401`.
-- **Logout é stateless.** `POST /api/auth/logout` responde `204`, mas não invalida nada no
-  servidor: o token continua válido até `expiraEm`, e quem deve descartá-lo é o cliente. A
-  revogação no servidor é pendência da N3
-  ([#19](https://github.com/iagokoch/horangotango/issues/19)).
-- **Bootstrap do primeiro Staff.** Na subida, se não existir **nenhum** Staff, a aplicação
-  cria um com `APP_BOOTSTRAP_STAFF_*` (ver [Variáveis de ambiente](#variáveis-de-ambiente)).
-  - É idempotente: com qualquer Staff já cadastrado, não faz nada.
-  - Nunca promove uma conta de Membro que já use o mesmo e-mail.
-  - Com senha menor que 8 caracteres, só registra um aviso no log e não cria o Staff.
-  - Em produção, defina as variáveis e troque a senha depois do primeiro login.
-
-| Rota | Quem acessa |
-|---|---|
-| `GET /api/health`, `/swagger-ui.html`, `/v3/api-docs/**`, `/actuator/health`, `/actuator/info`, `/error` | Público |
-| `POST /api/auth/register`, `POST /api/auth/login` | Público |
-| `POST /api/auth/logout` | Qualquer token válido |
-| `GET /api/tools`, `GET /api/tools/{id}` | MEMBER e STAFF |
-| `POST /api/tools`, `PATCH /api/tools/{id}` | STAFF |
-| `POST /api/staff` | STAFF |
-
-Sem token, ou com token inválido, a resposta é `401`. Com token válido de um papel sem
-permissão, é `403`. Os dois voltam em JSON no formato `ErrorResponse`.
-
-## Documentação
-
-- `backend/docs/prd.md` — requisitos (FR-x) e regras de negócio
-- `backend/docs/api-convencoes-http.md` — verbo HTTP e status code de cada rota
-- `backend/docs/api-nomenclatura-recursos.md` — nomes de recursos
-- `backend/docs/api-justificativa-tecnica.md` — porquê das decisões
-- `backend/docs/testing-manual.md` — como testar a API manualmente (Postman, Insomnia ou curl)
-- `backend/docs/postman/monitoolring.postman_collection.json` — coleção Postman (v2.1) com casos de
-  sucesso e de erro
-
-Swagger com a aplicação no ar: `http://localhost:8080/swagger-ui.html` (JSON em
-`/v3/api-docs`). Para rotas protegidas, faça o login e use o botão **Authorize**.
-
-- [Engenharia de Requisitos — N2](backend/docs/requisitos-n2/README.md) —
-  documentação de visão e escopo, ERS, casos de uso, diagramas UML,
-  matriz de rastreabilidade e plano de continuidade para N3.
-
-## Estrutura
-
+```bash
+export JAVA_HOME="$HOME/.jdks/ms-21.0.12.1"
+./mvnw test
 ```
-backend/docs/                # Documentação do projeto (PRD, padrões de API, testes manuais)
-└── postman/                 # Coleção Postman
 
+O Surefire inclui testes unitários (`*Test`, `*Tests`, `Test*`, `*TestCase`) e de integração
+(`*IT`, incluindo os testes de migrations). `ApiApplicationTests` também é executado.
+Os ITs estendem `AbstractIntegrationTest`, com Postgres singleton do Testcontainers e banco
+compartilhado entre as classes. Usam dados únicos e não dependem de tabelas vazias.
+O Docker Compose **não precisa estar iniciado** para rodar a suíte.
+
+Com Testcontainers **1.21.4**, não são necessárias flags adicionais para Docker 29. O problema
+anterior de descoberta do Docker vinha da negociação de uma API anterior à 1.44, exigida pelo
+Engine 29. Se reaparecer, confira a versão do BOM antes de alterar configurações locais.
+
+| Comando | Finalidade |
+|---|---|
+| `./mvnw -v` | Confere Maven e JDK utilizados pelo Wrapper |
+| `./mvnw compile` | Compila a API |
+| `./mvnw test` | Executa a suíte unitária e de integração |
+| `./mvnw spring-boot:run` | Inicia a aplicação |
+| `./mvnw clean package` | Executa o build e gera o JAR em `target/` |
+| `docker compose up -d` | Inicia o Postgres de desenvolvimento |
+| `docker compose down` | Encerra o Postgres de desenvolvimento |
+
+### Autenticação e papéis
+
+- `POST /api/auth/register` é público e cria sempre um **MEMBER**. Contas **STAFF** são
+  criadas por outro Staff em `POST /api/staff` ou pelo bootstrap do primeiro acesso.
+- `POST /api/auth/login` devolve `token`, `tipo` (`Bearer`), `expiraEm` e `usuario`.
+  Credenciais incorretas recebem `401` com a mesma mensagem para e-mail inexistente ou senha errada.
+- Envie o token em `Authorization: Bearer <token>`. O JWT usa HS256 e as claims `sub`
+  (id do usuário), `role`, `iat` e `exp`. Token expirado, sem `exp`, sem papel válido ou com
+  assinatura incorreta é recusado com `401`.
+- `POST /api/auth/logout` responde `204`. O cliente deve descartar o token; o servidor não
+  o revoga, e ele continua válido até expirar. Revogação é N3
+  ([#19](https://github.com/iagokoch/horangotango/issues/19)).
+- Na subida, o bootstrap cria o primeiro Staff somente se nenhum Staff existir. Não promove
+  um Membro que já tenha o mesmo e-mail; senha curta gera aviso e não cria a conta. Em produção,
+  defina as variáveis `APP_BOOTSTRAP_STAFF_*` antes da primeira subida e altere a senha inicial.
+
+### Endpoints implementados
+
+A tabela descreve o código presente na `main`. Todas as rotas de negócio usam `/api`.
+Nas rotas protegidas, token ausente ou inválido resulta em `401`; papel sem permissão resulta
+em `403`. O `GET` de empréstimo também verifica o dono no service.
+
+| Método | Rota | Acesso | Sucesso | Outros resultados principais |
+|---|---|---|---|---|
+| `GET` | `/api/health` | Público | `200` | — |
+| `POST` | `/api/auth/register` | Público | `201` | `400` dados inválidos; `409` e-mail repetido |
+| `POST` | `/api/auth/login` | Público | `200` | `400` corpo inválido; `401` credenciais inválidas |
+| `POST` | `/api/auth/logout` | Autenticado | `204` | — |
+| `POST` | `/api/staff` | STAFF | `201` | `400` dados inválidos; `409` e-mail repetido |
+| `GET` | `/api/tools` | MEMBER / STAFF | `200` | `400` filtro `status` inválido; aceita `?status=AVAILABLE` |
+| `GET` | `/api/tools/{id}` | MEMBER / STAFF | `200` | `404` ferramenta inexistente |
+| `POST` | `/api/tools` | STAFF | `201` | `400` dados inválidos; `409` código repetido |
+| `PATCH` | `/api/tools/{id}` | STAFF | `200` | `400` dados inválidos; `404` inexistente; `409` versão ou estado atual; `422` status não atribuível |
+| `GET` | `/api/settings/return-deadline` | STAFF | `200` | `404` prazo ainda não configurado |
+| `PUT` | `/api/settings/return-deadline` | STAFF | `200` | `400` campo `dias` ausente ou fora de 1 a 365 |
+| `POST` | `/api/loans` | STAFF | `201` | `400` forma inválida; `404` ferramenta ou membro inexistente; `409` prazo não configurado, ferramenta indisponível ou disputa por retirada; `422` checklist incompleto ou tomador Staff |
+| `GET` | `/api/loans/{id}` | MEMBER dono / STAFF | `200` | `403` empréstimo de outro membro; `404` inexistente |
+
+`PUT` e `DELETE /api/tools/{id}` não são suportados. Staff recebe `405`; um Membro pode
+receber `403` antes do roteamento pela restrição do prefixo. `POST /api/loans/{id}/return`
+e `GET /api/loans/{id}/checklists` ainda são **planejados para N2** e não integram esta tabela.
+
+O prazo vigente é copiado para o empréstimo: `prazoDevolucao = dataHoraRetirada + diasPrazo × 24h`,
+em UTC. Mudar a configuração só afeta novas retiradas. O checklist de retirada exige
+`estadoFuncional` (`INTACT` ou `DEFECTIVE`), `avariasVisiveis` e `acessoriosInclusos`.
+Ausência de avarias ou acessórios deve ser explícita (por exemplo, `"Sem avarias"` e `["Nenhum"]`);
+campos vazios não completam o checklist e recebem `422`. A retirada é transacional, com lock
+na ferramenta e índice único para impedir dois empréstimos ativos da mesma ferramenta.
+
+Também são públicos o Swagger (`/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**`),
+os endpoints Actuator expostos (`/actuator/health`, `/actuator/info`) e o despacho de erros
+(`/error`). Isso não concede acesso público às rotas de negócio protegidas.
+
+### Respostas de erro
+
+Erros tratados pelo Spring MVC e pelos handlers de autenticação/autorização usam
+`ErrorResponse {timestamp, status, error, message, details}`. Exemplo de estrutura:
+
+```json
+{
+  "timestamp": "2026-10-25T12:00:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Corpo da requisição inválido",
+  "details": ["dias: dias deve ser no mínimo 1"]
+}
+```
+
+| Status | Uso |
+|---|---|
+| `400` | JSON malformado, campo ou parâmetro inválido, falha de Bean Validation |
+| `401` | Token ausente/inválido em rota protegida ou login inválido |
+| `403` | Papel ou dono sem permissão |
+| `404` | Recurso inexistente, inclusive prazo ainda não configurado no GET |
+| `405` | Método não suportado na rota, após autorização |
+| `409` | Conflito com o estado atual: duplicidade, versão, indisponibilidade ou prazo não configurado na retirada |
+| `415` | Tipo de conteúdo não suportado |
+| `422` | Regra de negócio violada: checklist incompleto, tomador Staff ou status não atribuível |
+| `500` | Erro inesperado; mensagem genérica, com detalhe interno apenas no log |
+
+Exceções de outros filtros, fora do MVC, ainda podem sair pelo `/error` no formato padrão do
+Spring Boot. Rota inexistente sob `/api`, com token e papel permitidos, responde `404`;
+fora de `/api` e em prefixos restritos a autorização pode produzir `401`/`403` antes do
+roteamento. Os casos restantes estão nas [pendências para a N3](#pendências-para-a-n3).
+
+### Swagger e Postman
+
+Com a aplicação rodando, abra [Swagger UI](http://localhost:8080/swagger-ui.html)
+(OpenAPI JSON: [v3/api-docs](http://localhost:8080/v3/api-docs)). Faça login e use **Authorize**
+para chamar as rotas protegidas.
+
+A [coleção Postman](backend/docs/postman/monitoolring.postman_collection.json) usa o formato
+v2.1 e pode ser importada no Postman ou Insomnia. Execute as pastas em ordem:
+**Health → Auth → Staff → Tools**. A coleção grava os tokens e identificadores necessários
+e usa dados únicos por execução. O passo a passo está no
+[guia de testes manuais](backend/docs/testing-manual.md).
+
+**A coleção ainda não cobre settings e loans.** A ampliação da coleção e das respostas
+de erro no Swagger está pendente em
+[#11 — [Docs] Coleção Postman versionada e Swagger atualizado](https://github.com/iagokoch/horangotango/issues/11).
+Os guias de API também contêm descrições do desenho-alvo; use a tabela de endpoints acima
+para identificar o que já foi implementado.
+
+### Estrutura de pacotes
+
+```text
 backend/src/main/java/com/monitoolring/api/
-├── ApiApplication.java      # Entry point
-├── config/                  # Segurança, CORS, OpenAPI, BCrypt e bootstrap do primeiro Staff
+├── ApiApplication.java      # Entrada da aplicação
 ├── controller/              # Endpoints REST e tratamento global de exceções
-├── dto/                     # Objetos de transferência de dados
-├── mapper/                  # Conversão entidade <-> DTO
-├── service/                 # Regras de negócio
+├── service/                 # Regras de negócio e transações
 ├── repository/              # Acesso a dados
-├── domain/                  # Entidades/modelo de domínio
-├── security/                # Emissão/validação de JWT, filtro e respostas 401/403
-└── exception/               # Exceções customizadas
+├── domain/                  # Entidades e estados do domínio
+├── dto/                     # Records de requisição e resposta
+├── mapper/                  # Conversão entidade ↔ DTO com MapStruct
+├── security/                # JWT, usuário autenticado e respostas 401/403
+├── exception/               # Exceções de domínio e aplicação
+└── config/                  # Segurança, CORS, OpenAPI, Clock e bootstrap
 
 backend/src/main/resources/
 ├── application.yml
-└── db/changelog/            # Migrations Liquibase
+└── db/changelog/db.changelog-master.sql
 ```
+
+Classes usam nomes em inglês; campos de negócio e JSON usam português (`codigo`, `membroId`,
+`prazoDevolucao`), com enums da API em inglês. Liquibase mantém um master SQL com changesets
+ordenados e rollback; mudanças de schema entram em um changeset novo no fim do arquivo.
+
+## Frontend
+
+O diretório [`frontend/`](frontend/) pertence a outro integrante e contém apenas `clear.md`
+no estado atual. Ainda não há uma aplicação nem uma stack de frontend definida no código.
+O frontend consumirá a API; o backend já permite CORS de `http://localhost:3000` para
+`/api/**`, nos métodos GET, POST, PUT, PATCH e OPTIONS.
+
+## Documentação
+
+Os documentos em [`backend/docs/`](backend/docs/) são a fonte canônica de requisitos,
+contratos e decisões do projeto. O status de implementação está na tabela deste README.
+
+| Documento | Conteúdo |
+|---|---|
+| [PRD](backend/docs/prd.md) | Domínio, FR-1 a FR-19, regras de negócio e NFRs |
+| [Convenções HTTP](backend/docs/api-convencoes-http.md) | Métodos, status codes e fronteira entre 400, 422 e 409 |
+| [Nomenclatura de recursos](backend/docs/api-nomenclatura-recursos.md) | Recursos, rotas e estados da API |
+| [Justificativa técnica](backend/docs/api-justificativa-tecnica.md) | Motivos das decisões de API |
+| [Guia de testes manuais](backend/docs/testing-manual.md) | Fluxo manual com Postman, Insomnia e curl |
+| [Coleção Postman](backend/docs/postman/monitoolring.postman_collection.json) | Requisições e asserções de Health, Auth, Staff e Tools |
+| [Engenharia de Requisitos — N2](backend/docs/requisitos-n2/README.md) | Visão e escopo, ERS, casos de uso, diagramas UML, matriz de rastreabilidade e plano de continuidade para N3 |
+
+Os artefatos em `backend/docs/requisitos-n2/` foram elaborados por outros integrantes.
+Representam a especificação e a rastreabilidade; funcionalidades previstas ali não devem
+ser interpretadas como implementação concluída.
+
+## Fluxo do repositório
+
+- O GitHub mantém uma única branch, **`main`**.
+- Commits seguem Conventional Commits em português, por exemplo,
+  `docs: atualiza visao geral do projeto` ou `feat: registra devolucao de ferramenta`.
+- O trabalho é acompanhado por issues com os milestones
+  [N2 — v2.0](https://github.com/iagokoch/horangotango/milestone/1) e
+  [N3](https://github.com/iagokoch/horangotango/milestone/2).
+- Alterações de comportamento devem manter código, testes, contratos da API e status deste README coerentes.
 
 ## O que mudou desde a N1
 
@@ -249,30 +445,30 @@ A N1 está em [iagokoch/monitoolring--backend](https://github.com/iagokoch/monit
 
 ### O que a N2 acrescenta
 
-Legenda: ✅ na `main` · 🚧 em andamento (fora da `main`) · 📋 planejado
+Além da reorganização em monorepo e das instruções corrigidas de setup, já estão na `main`:
 
-| Item | Status |
-|---|---|
-| Reorganização em monorepo (`backend/` + `frontend/`) | ✅ |
-| `/api/health` e `/error` liberados sem token no `SecurityConfig` (na N1 caíam no `denyAll`) | ✅ |
-| Instruções de setup corrigidas (Postgres na 5433 via `DB_URL`, `JAVA_HOME`, variáveis de ambiente) | ✅ |
-| FR-1/FR-2 ([#1](https://github.com/iagokoch/horangotango/issues/1)): autocadastro de Membro, login (JWT com `role` e `exp`), logout stateless, cadastro de Staff por Staff, papéis MEMBER/STAFF e bootstrap do primeiro Staff | ✅ |
-| FR-3/4/5 ([#2](https://github.com/iagokoch/horangotango/issues/2)): Ferramenta do PRD (categoria, valor estimado, estado de conservação, status com 5 valores); `POST` → `201`; `PATCH` parcial com `versao`, inativação e reativação; `PUT` e `DELETE` removidos (`405`); código duplicado → `409`; filtro `?status=` | ✅ |
-| `./mvnw test` executa os `*IT`; Testcontainers 1.21.4 compatível com Docker 29 ([#7](https://github.com/iagokoch/horangotango/issues/7)) | ✅ |
-| CORS: preflight (`OPTIONS`) liberado no Spring Security ([#8](https://github.com/iagokoch/horangotango/issues/8)) | ✅ |
-| JSON malformado, método não suportado e rota inexistente respondem no formato `ErrorResponse` | ✅ |
-| Token sem `exp` recusado com `401` ([#9](https://github.com/iagokoch/horangotango/issues/9)) | ✅ |
-| Erro inesperado responde `500` no formato `ErrorResponse`, com mensagem genérica e sem detalhe interno; exceções padrão do Spring MVC (ex.: `415`) mantêm o status, com corpo `ErrorResponse` ([#9](https://github.com/iagokoch/horangotango/issues/9)) | ✅ |
-| CORS sem `DELETE` nos métodos permitidos (a API não tem mais `DELETE`) | ✅ |
-| Coleção Postman e Swagger com respostas de erro documentadas ([#11](https://github.com/iagokoch/horangotango/issues/11)) | 🚧 |
-| FR-8 ([#3](https://github.com/iagokoch/horangotango/issues/3)): prazo padrão de devolução | 🚧 |
-| FR-9/10/11 ([#4](https://github.com/iagokoch/horangotango/issues/4)): Retirada com Checklist de Conservação e Prazo de Devolução | 🚧 |
-| FR-12/17/18 ([#5](https://github.com/iagokoch/horangotango/issues/5)): Bloqueio por Inadimplência, marcação de Atraso e liberação do Bloqueio | 📋 |
-| FR-13/14/16 ([#6](https://github.com/iagokoch/horangotango/issues/6)): Devolução com Checklist e consulta comparativa | 📋 |
+- FR-1/FR-2: cadastro de Membro, login e emissão de JWT com papel e expiração, logout
+  stateless, cadastro de Staff por Staff e bootstrap da primeira conta Staff.
+- FR-3/FR-4/FR-5: categoria, valor estimado e estado de conservação da ferramenta;
+  cinco status; criação com `201`; edição parcial via `PATCH` com `versao`; inativação e
+  reativação; código repetido como `409`; catálogo com filtro de status.
+- FR-8: prazo padrão configurável por Staff, preservando os prazos de empréstimos existentes.
+- FR-9/FR-10/FR-11: retirada com checklist obrigatório e imutável, prazo calculado em UTC,
+  atualização da ferramenta para `ON_LOAN` e consulta do empréstimo por dono ou Staff.
+- Execução dos ITs pelo Surefire e atualização para Testcontainers 1.21.4, compatível com
+  Docker 29 ([#7](https://github.com/iagokoch/horangotango/issues/7)).
+- CORS integrado ao Spring Security, preflight permitido e ausência de DELETE nos métodos
+  aceitos ([#8](https://github.com/iagokoch/horangotango/issues/8)).
+- Health e despacho `/error` liberados; JWT sem expiração recusado; erros do MVC, inclusive
+  JSON malformado e erros inesperados, no formato `ErrorResponse`
+  ([#9](https://github.com/iagokoch/horangotango/issues/9)).
+- README na raiz, guia manual atualizado, coleção Postman de Health/Auth/Staff/Tools e
+  documentação inicial do Swagger. A cobertura de settings e loans ainda precisa ser ampliada
+  ([#11](https://github.com/iagokoch/horangotango/issues/11)).
 
-Escopo da N2: 15 dos 19 FRs do PRD (~79%): FR-1 a FR-5, FR-8 a FR-14 e FR-16 a FR-18.
-As rotas citadas seguem [`backend/docs/api-convencoes-http.md`](backend/docs/api-convencoes-http.md), todas
-sob o prefixo `/api`. Esta tabela é atualizada a cada rodada.
+Para completar os **15 FRs da N2**, faltam atraso/bloqueio/liberação (FR-12/FR-17/FR-18) e
+fluxo de devolução/checklist/disponibilidade (FR-13/FR-14/FR-16). Veja os estados e links na
+[tabela de requisitos](#status-dos-requisitos). O registro de divergência (FR-15) permanece N3.
 
 ## Pendências para a N3
 
