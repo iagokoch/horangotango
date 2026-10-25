@@ -124,3 +124,12 @@ CREATE TABLE checklist_acessorios (
 );
 --rollback DROP TABLE checklist_acessorios;
 --rollback DROP TABLE checklists;
+
+--changeset monitoolring:7-emprestimos-dados-devolucao
+--comment: Devolucao confirmada por Staff (FR-13): horario e usuario responsavel. Colunas nulas enquanto nao houver devolucao; dados da Retirada permanecem inalterados.
+ALTER TABLE emprestimos ADD COLUMN data_hora_devolucao TIMESTAMP;
+ALTER TABLE emprestimos ADD COLUMN id_staff_devolucao VARCHAR(38);
+ALTER TABLE emprestimos ADD CONSTRAINT fk_emprestimos_staff_devolucao FOREIGN KEY (id_staff_devolucao) REFERENCES usuarios (id);
+--rollback ALTER TABLE emprestimos DROP CONSTRAINT fk_emprestimos_staff_devolucao;
+--rollback ALTER TABLE emprestimos DROP COLUMN id_staff_devolucao;
+--rollback ALTER TABLE emprestimos DROP COLUMN data_hora_devolucao;

@@ -24,7 +24,7 @@ import liquibase.resource.ClassLoaderResourceAccessor;
  * Garante que o changeset 3 (modelo de Ferramenta do PRD) aplica sem erro num banco que já tem
  * ferramentas no formato antigo (com quantidade), faz o backfill com os valores-sentinela e
  * que o rollback volta ao formato anterior. Em seguida aplica o restante do changelog sobre esse
- * banco com dados e verifica o rollback dos changesets 4 a 6. Usa um Postgres próprio, isolado do
+ * banco com dados e verifica o rollback dos changesets 4 a 7. Usa um Postgres próprio, isolado do
  * banco dos ITs.
  */
 class ChangelogMigrationIT {
@@ -77,11 +77,69 @@ class ChangelogMigrationIT {
                     assertThat(rs.getInt("quantidade")).isEqualTo(1);
                 }
 
-                // changesets 4-6 (prazo, empréstimos, checklists) sobre o banco com a ferramenta legada
-                liquibase.update(new Contexts(), new LabelExpression());
+                // Reaplica 3 e aplica 4-6; a migração 7 deve funcionar com empréstimos e checklists existentes.
+                liquibase.update(4, new Contexts(), new LabelExpression());
                 assertThat(tables(connection)).contains("configuracao_prazo_devolucao", "emprestimos",
                         "checklists", "checklist_acessorios");
+                assertThat(columns(connection, "emprestimos")).doesNotContain("data_hora_devolucao",
+                        "id_staff_devolucao");
 
+                try (Statement st = connection.createStatement()) {
+                    st.executeUpdate("INSERT INTO usuarios (id, nome, email, senha_hash, papel, id_usuario_criacao, "
+                            + "data_hora_criacao) VALUES ('migration-staff', 'Staff', 'staff@migration.test', "
+                            + "'hash-teste', 'STAFF', 'migration-staff', now()), ('migration-member', 'Membro', "
+                            + "'member@migration.test', 'hash-teste', 'MEMBER', 'migration-member', now())");
+                    st.executeUpdate("INSERT INTO emprestimos (id, id_ferramenta, id_membro, id_staff_retirada, "
+                            + "data_hora_retirada, dias_prazo, prazo_devolucao, status) VALUES ('migration-loan', "
+                            + "'legacy-1', 'migration-member', 'migration-staff', '2026-10-01 12:00:00', 7, "
+                            + "'2026-10-08 12:00:00', 'ACTIVE')");
+                    st.executeUpdate("INSERT INTO checklists (id, id_emprestimo, tipo, estado_funcional, "
+                            + "avarias_visiveis, id_usuario_registro, data_hora_registro) VALUES "
+                            + "('migration-checklist', 'migration-loan', 'CHECKOUT', 'INTACT', 'Sem avarias', "
+                            + "'migration-staff', '2026-10-01 12:00:00')");
+                }
+                commitIfNeeded(connection);
+
+                liquibase.update(1, new Contexts(), new LabelExpression());
+                assertThat(columns(connection, "emprestimos")).contains("data_hora_devolucao", "id_staff_devolucao");
+                try (Statement st = connection.createStatement();
+                        ResultSet rs = st.executeQuery("SELECT status, data_hora_devolucao, id_staff_devolucao "
+                                + "FROM emprestimos WHERE id = 'migration-loan'")) {
+                    assertThat(rs.next()).isTrue();
+                    assertThat(rs.getString("status")).isEqualTo("ACTIVE");
+                    assertThat(rs.getTimestamp("data_hora_devolucao")).isNull();
+                    assertThat(rs.getString("id_staff_devolucao")).isNull();
+                }
+                List<String> foreignKeys = new ArrayList<>();
+                try (ResultSet rs = connection.getMetaData().getImportedKeys(null, "public", "emprestimos")) {
+                    while (rs.next()) {
+                        foreignKeys.add(rs.getString("FKCOLUMN_NAME") + "->" + rs.getString("PKTABLE_NAME"));
+                    }
+                }
+                assertThat(foreignKeys).contains("id_staff_devolucao->usuarios");
+                try (Statement st = connection.createStatement()) {
+                    st.executeUpdate("UPDATE emprestimos SET status = 'RETURNED', "
+                            + "data_hora_devolucao = '2026-10-02 12:00:00', id_staff_devolucao = 'migration-staff' "
+                            + "WHERE id = 'migration-loan'");
+                }
+                commitIfNeeded(connection);
+
+                // Rollback isolado de 7 preserva o empréstimo e seu Checklist de Retirada.
+                liquibase.rollback(1, (String) null);
+                assertThat(columns(connection, "emprestimos")).doesNotContain("data_hora_devolucao",
+                        "id_staff_devolucao");
+                try (Statement st = connection.createStatement();
+                        ResultSet rs = st.executeQuery("SELECT e.status, c.tipo FROM emprestimos e JOIN checklists c "
+                                + "ON c.id_emprestimo = e.id WHERE e.id = 'migration-loan'")) {
+                    assertThat(rs.next()).isTrue();
+                    assertThat(rs.getString("status")).isEqualTo("RETURNED");
+                    assertThat(rs.getString("tipo")).isEqualTo("CHECKOUT");
+                }
+
+                // Confere reaplicação de 7 e o rollback restante de 4-6.
+                liquibase.update(1, new Contexts(), new LabelExpression());
+                assertThat(columns(connection, "emprestimos")).contains("data_hora_devolucao", "id_staff_devolucao");
+                liquibase.rollback(1, (String) null);
                 liquibase.rollback(3, (String) null);
                 assertThat(tables(connection)).doesNotContain("configuracao_prazo_devolucao", "emprestimos",
                         "checklists", "checklist_acessorios");
@@ -107,8 +165,12 @@ class ChangelogMigrationIT {
     }
 
     private static List<String> columns(Connection connection) throws Exception {
+        return columns(connection, "ferramentas");
+    }
+
+    private static List<String> columns(Connection connection, String table) throws Exception {
         List<String> columns = new ArrayList<>();
-        try (ResultSet rs = connection.getMetaData().getColumns(null, "public", "ferramentas", null)) {
+        try (ResultSet rs = connection.getMetaData().getColumns(null, "public", table, null)) {
             while (rs.next()) {
                 columns.add(rs.getString("COLUMN_NAME"));
             }
