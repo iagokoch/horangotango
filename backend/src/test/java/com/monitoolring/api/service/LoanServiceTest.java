@@ -29,7 +29,6 @@ import com.monitoolring.api.domain.ChecklistType;
 import com.monitoolring.api.domain.FunctionalState;
 import com.monitoolring.api.domain.Loan;
 import com.monitoolring.api.domain.LoanStatus;
-import com.monitoolring.api.domain.ReturnDeadlineSetting;
 import com.monitoolring.api.domain.Tool;
 import com.monitoolring.api.domain.ToolStatus;
 import com.monitoolring.api.domain.User;
@@ -81,7 +80,7 @@ class LoanServiceTest {
         tool = Tool.criar("tool-1", "FUR-01", "Furadeira", "Elétricas", new BigDecimal("300.00"), "Nova",
                 "staff-0", NOW);
 
-        when(returnDeadlineService.getCurrent()).thenReturn(ReturnDeadlineSetting.criar(7, "staff-0", NOW));
+        when(returnDeadlineService.getCurrentDays()).thenReturn(7);
         when(userRepository.findById("membro-1")).thenReturn(Optional.of(membro));
         when(toolRepository.findByIdForUpdate("tool-1")).thenReturn(Optional.of(tool));
         when(loanRepository.saveAndFlush(any(Loan.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -115,7 +114,7 @@ class LoanServiceTest {
 
     @Test
     void refusesWhenDeadlineNotConfigured() {
-        when(returnDeadlineService.getCurrent()).thenThrow(new ReturnDeadlineNotConfiguredException());
+        when(returnDeadlineService.getCurrentDays()).thenThrow(new ReturnDeadlineNotConfiguredException());
 
         assertThatThrownBy(() -> loanService.checkout(request(CHECKLIST_OK), "staff-1"))
                 .isInstanceOf(ReturnDeadlineNotConfiguredException.class);
