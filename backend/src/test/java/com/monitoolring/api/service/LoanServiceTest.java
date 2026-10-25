@@ -39,6 +39,7 @@ import com.monitoolring.api.dto.LoanCreateRequest;
 import com.monitoolring.api.exception.IncompleteChecklistException;
 import com.monitoolring.api.exception.LoanAccessDeniedException;
 import com.monitoolring.api.exception.LoanNotFoundException;
+import com.monitoolring.api.exception.MemberBlockedException;
 import com.monitoolring.api.exception.MemberNotFoundException;
 import com.monitoolring.api.exception.NotAMemberException;
 import com.monitoolring.api.exception.ReturnDeadlineNotConfiguredException;
@@ -137,6 +138,27 @@ class LoanServiceTest {
         assertThatThrownBy(() -> loanService.checkout(
                 new LoanCreateRequest("tool-1", "staff-2", CHECKLIST_OK), "staff-1"))
                 .isInstanceOf(NotAMemberException.class);
+        assertNothingRecorded();
+    }
+
+    @Test
+    void blocksOverdueMemberBeforeToolLookupAndChecklistListingEveryLoan() {
+        Loan first = Loan.registrarRetirada("loan-1", "tool-2", membro.getId(), "staff-0",
+                NOW.minusSeconds(9 * 86400), 7);
+        Loan second = Loan.registrarRetirada("loan-2", "tool-3", membro.getId(), "staff-0",
+                NOW.minusSeconds(8 * 86400), 7);
+        when(loanRepository.findByIdMembroAndStatusOrderByPrazoDevolucaoAscIdAsc(
+                membro.getId(), LoanStatus.ACTIVE)).thenReturn(List.of(first, second));
+
+        MemberBlockedException ex = catchThrowableOfType(
+                () -> loanService.checkout(request(null), "staff-1"), MemberBlockedException.class);
+
+        assertThat(ex.getEmprestimosEmAtraso()).containsExactly(
+                "Empréstimo loan-1, ferramenta tool-2, em atraso desde " + first.getPrazoDevolucao() + ".",
+                "Empréstimo loan-2, ferramenta tool-3, em atraso desde " + second.getPrazoDevolucao() + ".");
+        ex.getEmprestimosEmAtraso().forEach(detail -> assertThat(ex.getMessage()).contains(detail));
+        verify(toolRepository, never()).findByIdForUpdate(any());
+        assertThat(tool.getStatus()).isEqualTo(ToolStatus.AVAILABLE);
         assertNothingRecorded();
     }
 
