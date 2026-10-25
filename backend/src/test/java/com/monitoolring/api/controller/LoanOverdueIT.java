@@ -37,6 +37,7 @@ import com.monitoolring.api.domain.LoanStatus;
 import com.monitoolring.api.domain.User;
 import com.monitoolring.api.dto.ChecklistRequest;
 import com.monitoolring.api.dto.LoanCreateRequest;
+import com.monitoolring.api.dto.LoanReturnRequest;
 import com.monitoolring.api.dto.ToolCreateRequest;
 import com.monitoolring.api.dto.UserCreateRequest;
 import com.monitoolring.api.repository.LoanRepository;
@@ -143,12 +144,12 @@ class LoanOverdueIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.details[1]", containsString(second.getId())));
         assertNoCheckout(requestedTool);
 
-        simulateReturn(first);
+        returnLoan(first);
         assertBlocked(checkout(requestedTool, membro, CHECKLIST_OK), second)
                 .andExpect(jsonPath("$.details", hasSize(1)));
         assertNoCheckout(requestedTool);
 
-        simulateReturn(second);
+        returnLoan(second);
         checkout(requestedTool, membro, CHECKLIST_OK).andExpect(status().isCreated());
         assertThat(loanRepository.countByIdFerramentaAndStatus(requestedTool, LoanStatus.ACTIVE)).isEqualTo(1);
     }
@@ -157,7 +158,12 @@ class LoanOverdueIT extends AbstractIntegrationTest {
     @ValueSource(strings = {"RETURNED", "LOST"})
     void closedLoanDoesNotBlockEvenAfterDeadline(String loanStatus) throws Exception {
         Loan original = createLoan(newTool(), membro);
-        jdbcTemplate.update("UPDATE emprestimos SET status = ? WHERE id = ?", loanStatus, original.getId());
+        if ("RETURNED".equals(loanStatus)) {
+            returnLoan(original);
+        } else {
+            // Registro de perda permanece N3; aqui só se verifica que estado encerrado não bloqueia.
+            jdbcTemplate.update("UPDATE emprestimos SET status = ? WHERE id = ?", loanStatus, original.getId());
+        }
         at(original.getPrazoDevolucao().plusSeconds(1));
 
         checkout(newTool(), membro, CHECKLIST_OK).andExpect(status().isCreated());
@@ -181,7 +187,7 @@ class LoanOverdueIT extends AbstractIntegrationTest {
 
         assertBlocked(checkout(requestedTool, membro, CHECKLIST_OK), overdue)
                 .andExpect(jsonPath("$.details", hasSize(1)));
-        simulateReturn(overdue);
+        returnLoan(overdue);
 
         checkout(requestedTool, membro, CHECKLIST_OK).andExpect(status().isCreated());
         assertThat(loanRepository.findById(future.getId()).orElseThrow().getStatus()).isEqualTo(LoanStatus.ACTIVE);
@@ -251,9 +257,11 @@ class LoanOverdueIT extends AbstractIntegrationTest {
                 Long.class, toolId)).isZero();
     }
 
-    private void simulateReturn(Loan loan) {
-        // R3-b implementará a operação de devolução; aqui se testa a liberação ao observar o estado encerrado.
-        jdbcTemplate.update("UPDATE emprestimos SET status = 'RETURNED' WHERE id = ?", loan.getId());
-        jdbcTemplate.update("UPDATE ferramentas SET status = 'AVAILABLE' WHERE id = ?", loan.getIdFerramenta());
+    private void returnLoan(Loan loan) throws Exception {
+        mockMvc.perform(post("/api/loans/{id}/return", loan.getId())
+                .header("Authorization", "Bearer " + staffToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoanReturnRequest(CHECKLIST_OK))))
+                .andExpect(status().isOk());
     }
 }
