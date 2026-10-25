@@ -3,6 +3,7 @@ package com.monitoolring.api.service;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.monitoolring.api.domain.Checklist;
 import com.monitoolring.api.domain.ChecklistType;
 import com.monitoolring.api.domain.Loan;
+import com.monitoolring.api.domain.LoanStatus;
 import com.monitoolring.api.domain.Tool;
 import com.monitoolring.api.domain.User;
 import com.monitoolring.api.domain.UserRole;
@@ -19,6 +21,7 @@ import com.monitoolring.api.dto.ChecklistRequest;
 import com.monitoolring.api.dto.LoanCreateRequest;
 import com.monitoolring.api.exception.LoanAccessDeniedException;
 import com.monitoolring.api.exception.LoanNotFoundException;
+import com.monitoolring.api.exception.MemberBlockedException;
 import com.monitoolring.api.exception.MemberNotFoundException;
 import com.monitoolring.api.exception.NotAMemberException;
 import com.monitoolring.api.exception.ToolNotAvailableException;
@@ -53,7 +56,7 @@ public class LoanService {
      * Confirma a Retirada (FR-9 a FR-11) numa única transação. Ordem das verificações:
      * <ol>
      *   <li>prazo padrão configurado (FR-8) — 409;</li>
-     *   <li>Membro existe (404), é Membro e não Staff (422) e não está bloqueado (FR-12, rodada 3);</li>
+     *   <li>Membro existe (404), é Membro e não Staff (422) e não está bloqueado por atraso (FR-12 — 409);</li>
      *   <li>Ferramenta existe (404) e está AVAILABLE (409) — lida com lock pessimista;</li>
      *   <li>Checklist com os campos mínimos (FR-10) — 422. Vem depois do bloqueio, como pede o FR-12.</li>
      * </ol>
@@ -106,12 +109,22 @@ public class LoanService {
     }
 
     /**
-     * Ponto de entrada do Bloqueio por Inadimplência (FR-12): na rodada 3, recusar aqui (409) o Membro
-     * com algum Empréstimo em Atraso, informando quais e desde quando. Fica antes da validação do
-     * Checklist, como exige o FR-12. Por enquanto não bloqueia ninguém.
+     * Recalcula o Bloqueio por Inadimplência a cada Retirada (FR-12, FR-17 e FR-18).
+     * Só empréstimos ACTIVE com prazo estritamente anterior a agora bloqueiam; ao encerrar
+     * o último atraso, a próxima tentativa é liberada sem flag persistida nem job.
      */
     void assertMemberNotBlocked(User membro) {
-        // FR-12 — implementação na rodada 3
+        Instant agora = clock.instant();
+        List<String> emprestimosEmAtraso = loanRepository
+                .findByIdMembroAndStatusOrderByPrazoDevolucaoAscIdAsc(membro.getId(), LoanStatus.ACTIVE)
+                .stream()
+                .filter(loan -> loan.getPrazoDevolucao().isBefore(agora))
+                .map(loan -> "Empréstimo " + loan.getId() + ", ferramenta " + loan.getIdFerramenta()
+                        + ", em atraso desde " + loan.getPrazoDevolucao() + ".")
+                .toList();
+        if (!emprestimosEmAtraso.isEmpty()) {
+            throw new MemberBlockedException(emprestimosEmAtraso);
+        }
     }
 
     private Instant now() {

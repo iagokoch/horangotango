@@ -25,6 +25,7 @@ import com.monitoolring.api.exception.IncompleteChecklistException;
 import com.monitoolring.api.exception.InvalidToolStatusTransitionException;
 import com.monitoolring.api.exception.LoanAccessDeniedException;
 import com.monitoolring.api.exception.LoanNotFoundException;
+import com.monitoolring.api.exception.MemberBlockedException;
 import com.monitoolring.api.exception.MemberNotFoundException;
 import com.monitoolring.api.exception.NotAMemberException;
 import com.monitoolring.api.exception.ReturnDeadlineNotConfiguredException;
@@ -127,6 +128,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotAMember(NotAMemberException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse.of(
                 HttpStatus.UNPROCESSABLE_ENTITY.value(), "Unprocessable Entity", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MemberBlockedException.class)
+    public ResponseEntity<ErrorResponse> handleMemberBlocked(MemberBlockedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
+                HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage(), ex.getEmprestimosEmAtraso()));
     }
 
     @ExceptionHandler(MemberNotFoundException.class)
