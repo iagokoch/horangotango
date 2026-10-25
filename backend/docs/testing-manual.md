@@ -2,7 +2,7 @@
 
 O caminho principal é a **coleção Postman** versionada em
 [`postman/monitoolring.postman_collection.json`](postman/monitoolring.postman_collection.json).
-Ela cobre todas as rotas que existem hoje (Health, Auth, Staff, Tools), com casos de sucesso e
+Ela cobre as rotas implementadas (Health, Auth, Staff, Tools, Settings e Loans), com casos de sucesso e
 de erro, e cada request tem testes de status code. Este guia explica como usá-la e, para quem
 preferir, mostra o mesmo fluxo com `curl`.
 
@@ -34,6 +34,9 @@ mais preciso gerar token à mão: o token vem do login.
    - **Auth → Login Staff (bootstrap)** grava `token`, que a coleção usa como Bearer padrão.
    - **Auth → Login Membro** grava `memberToken`, usado nos casos de `403`.
    - **Tools → Cadastrar ferramenta** grava `toolId` e `toolVersao`, usados pelo resto da pasta.
+   - **Settings** consulta e configura o prazo padrão, validando limites e permissões.
+   - **Loans** cria ferramentas e outro Membro próprios para a execução, confirma retiradas,
+     preserva o prazo de empréstimos existentes, devolve e consulta os dois checklists.
 4. E-mails e códigos de ferramenta são gerados a cada execução, então a coleção pode rodar
    várias vezes no mesmo banco.
 
@@ -45,6 +48,23 @@ npx newman run docs/postman/monitoolring.postman_collection.json
 ```
 
 Resultado esperado: todos os requests e asserções passando, sem falhas.
+
+Use um banco de desenvolvimento: a coleção cria dados de teste e altera o prazo padrão.
+Se já havia prazo configurado, a última requisição restaura seu valor. Se ainda não havia,
+o prazo fica configurado em 7 dias; não existe DELETE da configuração.
+
+### 2.1 Atraso e concorrência
+
+A coleção não altera o relógio da aplicação nem espera dias para vencer um empréstimo.
+Os cenários de bloqueio `409`, múltiplos atrasos e liberação após a última devolução são
+verificados por `LoanOverdueIT`, com `Clock` controlável. `LoanCheckoutReviewIT` cobre
+mudanças de prazo e atraso enquanto a Retirada espera o lock; `LoanControllerIT` e
+`LoanReturnIT` cobrem tentativas concorrentes. Execute a suíte de dentro de `backend/`:
+
+```bash
+export JAVA_HOME="$HOME/.jdks/ms-21.0.12.1"
+./mvnw test
+```
 
 ## 3. O mesmo fluxo com curl
 
@@ -88,6 +108,24 @@ curl -s -X PATCH $BASE/api/tools/$TOOL_ID -H "Authorization: Bearer $STAFF_TOKEN
 # Inativar (remoção lógica) → 200, status INACTIVE
 curl -s -X PATCH $BASE/api/tools/$TOOL_ID -H "Authorization: Bearer $STAFF_TOKEN" \
   -H "Content-Type: application/json" -d '{"status":"INACTIVE","versao":1}'
+
+# Configurar prazo padrao (Staff) → 200; so vale para retiradas novas
+curl -s -X PUT $BASE/api/settings/return-deadline -H "Authorization: Bearer $STAFF_TOKEN" \
+  -H "Content-Type: application/json" -d '{"dias":7}'
+
+# Use uma ferramenta AVAILABLE e um membro cadastrado; copie o id do emprestimo
+curl -s -X POST $BASE/api/loans -H "Authorization: Bearer $STAFF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"ferramentaId":"ID_FERRAMENTA_DISPONIVEL","membroId":"ID_MEMBRO","checklist":{"estadoFuncional":"INTACT","avariasVisiveis":"Sem avarias","acessoriosInclusos":["Nenhum"]}}'
+LOAN_ID=cole-o-id-aqui
+
+# Comparar checklists (dono ou Staff); devolucao e nula antes de confirmar
+curl -s $BASE/api/loans/$LOAN_ID/checklists -H "Authorization: Bearer $MEMBER_TOKEN"
+
+# Devolver (Staff) → 200, emprestimo RETURNED e ferramenta AVAILABLE
+curl -s -X POST $BASE/api/loans/$LOAN_ID/return -H "Authorization: Bearer $STAFF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"checklist":{"estadoFuncional":"INTACT","avariasVisiveis":"Sem avarias","acessoriosInclusos":["Nenhum"]}}'
 ```
 
 ## 4. Códigos que você deve ver
@@ -108,6 +146,11 @@ Todo erro volta como JSON no formato `ErrorResponse`
 | `PATCH` mudando o status de uma ferramenta emprestada (`ON_LOAN`) | `409` |
 | `PATCH` pedindo `status` `ON_LOAN`, `LOST` ou `UNDER_REPAIR` | `422` |
 | Ferramenta inexistente | `404` |
+| GET do prazo antes da primeira configuração | `404` |
+| Retirada sem prazo configurado, ferramenta indisponível ou Membro em atraso | `409` |
+| Tomador Staff ou checklist incompleto na Retirada/Devolução | `422` |
+| Devolução de Empréstimo já encerrado, inclusive tentativa simultânea perdedora | `409` |
+| Membro consultando Empréstimo ou checklists de outro Membro | `403` |
 | `DELETE` ou `PUT` em `/api/tools/{id}` como Staff (não existem; a remoção é lógica). Um Membro recebe `403` antes | `405` |
 | Erro inesperado no servidor (mensagem genérica, sem detalhe interno) | `500` |
 

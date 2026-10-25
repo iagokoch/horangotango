@@ -76,6 +76,15 @@ a tradução oficial para os termos do Glossário do PRD (§3).
 Os nomes de campo do JSON continuam em português (`codigo`, `valorEstimado`,
 `estadoConservacao`, `papel`), como permite a regra 6.
 
+No Empréstimo, `status` usa `ACTIVE` (aberto), `RETURNED` (devolvido) e `LOST`
+(encerrado por perda, fluxo da N3). Atraso não é valor persistido desse enum:
+é calculado em tempo real comparando o prazo com o `Clock` UTC. Na N2, aparece
+na recusa `409` da nova Retirada, com as pendências em `message` e `details`.
+
+Checklist usa `tipo` `CHECKOUT`/`RETURN` e `estadoFuncional` `INTACT`/`DEFECTIVE`.
+`GET /loans/{id}/checklists` retorna `emprestimoId`, `checklistRetirada` e
+`checklistDevolucao` (nulo antes da devolução), com acesso do dono ou Staff.
+
 ## 3. Sub-resources: quando aninhar
 
 Um resource é aninhado sob outro (`/pai/{id}/filho`) quando a relação é de
@@ -110,6 +119,10 @@ Nem todo conceito do domínio vira uma rota própria. O **Bloqueio por
 Inadimplência** é um estado computado em tempo real (FR-17/FR-18), não uma
 entidade armazenada — por isso não existe `GET /bloqueios`. Ele é exposto
 como campo dentro da representação de `members/{id}`:
+
+> **Desenho da N3:** `members/{id}` e a consulta de histórico ainda não estão
+> implementados. A N2 já calcula o bloqueio a cada tentativa de Retirada e o
+> libera automaticamente após resolver o último atraso, sem flag persistida.
 
 ```json
 GET /members/42
