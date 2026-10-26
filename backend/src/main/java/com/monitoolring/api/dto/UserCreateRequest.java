@@ -4,10 +4,14 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import com.monitoolring.api.validation.ValidPassword;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Corpo de criação de conta, usado tanto no autocadastro de Membro quanto no cadastro de Staff.
  * Não existe campo de papel: o papel é decidido pela rota chamada (FR-2).
- * O limite de 72 caracteres da senha é o máximo que o BCrypt considera.
+ * A senha tem no mínimo 8 caracteres e no máximo 72 bytes UTF-8, limite do BCrypt.
  */
 public record UserCreateRequest(
         @NotBlank(message = "nome é obrigatório")
@@ -20,7 +24,9 @@ public record UserCreateRequest(
         String email,
 
         @NotBlank(message = "senha é obrigatória")
-        @Size(min = 8, max = 72, message = "senha deve ter entre 8 e 72 caracteres")
+        @ValidPassword
+        @Schema(description = "No mínimo 8 caracteres e no máximo 72 bytes UTF-8. "
+                + "Caracteres acentuados e emojis podem ocupar mais de um byte.")
         String senha
 ) {
 }

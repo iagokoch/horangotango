@@ -44,7 +44,8 @@ public class StaffBootstrapRunner implements ApplicationRunner {
             case STAFF_ALREADY_EXISTS -> log.debug("Bootstrap: já existe Staff cadastrado; nada a fazer.");
             case NOT_CONFIGURED -> log.warn("Bootstrap: nenhum Staff cadastrado e app.bootstrap.staff.* "
                     + "não configurado — o sistema está sem Staff (FR-2).");
-            case INVALID_PASSWORD -> log.warn("Bootstrap: app.bootstrap.staff.password tem menos de 8 caracteres; "
+            case INVALID_PASSWORD -> log.warn("Bootstrap: app.bootstrap.staff.password deve ter pelo menos "
+                    + "8 caracteres e no máximo 72 bytes em UTF-8; "
                     + "Staff inicial NÃO foi criado.");
             case EMAIL_ALREADY_IN_USE -> log.warn("Bootstrap: o e-mail '{}' já pertence a uma conta de Membro; "
                     + "Staff inicial NÃO foi criado (contas existentes nunca são promovidas automaticamente).",

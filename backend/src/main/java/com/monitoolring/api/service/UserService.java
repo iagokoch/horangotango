@@ -13,11 +13,10 @@ import com.monitoolring.api.domain.UserRole;
 import com.monitoolring.api.dto.UserCreateRequest;
 import com.monitoolring.api.exception.DuplicateUserEmailException;
 import com.monitoolring.api.repository.UserRepository;
+import com.monitoolring.api.security.PasswordPolicy;
 
 @Service
 public class UserService {
-
-    static final int MIN_PASSWORD_LENGTH = 8;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -49,7 +48,7 @@ public class UserService {
         if (isBlank(nome) || isBlank(email) || isBlank(senha)) {
             return StaffBootstrapResult.NOT_CONFIGURED;
         }
-        if (senha.length() < MIN_PASSWORD_LENGTH) {
+        if (!PasswordPolicy.isValidForCreation(senha)) {
             return StaffBootstrapResult.INVALID_PASSWORD;
         }
         if (userRepository.existsByEmail(normalizeEmail(email))) {
