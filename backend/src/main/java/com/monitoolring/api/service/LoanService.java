@@ -63,11 +63,12 @@ public class LoanService {
      *   <li>Checklist com os campos mínimos (FR-10) — 422. Vem depois do bloqueio, como pede o FR-12.</li>
      * </ol>
      * Ao confirmar: grava o Empréstimo com os dias vigentes e o prazo calculado, grava o Checklist de
-     * Retirada e marca a Ferramenta como ON_LOAN.
+     * Retirada e marca a Ferramenta como ON_LOAN. Após obter o lock, revalida o bloqueio e consulta
+     * novamente o prazo vigente: ambos podem ter mudado durante a espera.
      */
     @Transactional
     public LoanDetails checkout(LoanCreateRequest request, String idStaff) {
-        int diasPrazo = returnDeadlineService.getCurrent().getDias();
+        returnDeadlineService.getCurrentDays();
 
         User membro = userRepository.findById(request.membroId())
                 .orElseThrow(() -> new MemberNotFoundException(request.membroId()));
@@ -79,6 +80,10 @@ public class LoanService {
         Tool tool = toolRepository.findByIdForUpdate(request.ferramentaId())
                 .orElseThrow(() -> new ToolNotFoundException(request.ferramentaId()));
         tool.assertDisponivelParaRetirada();
+
+        // A espera pelo lock pode atravessar um vencimento ou uma alteração do prazo padrão.
+        assertMemberNotBlocked(membro);
+        int diasPrazo = returnDeadlineService.getCurrentDays();
 
         Checklist.Dados dadosChecklist = toDados(request.checklist());
         Checklist.validarPreenchimento(dadosChecklist);

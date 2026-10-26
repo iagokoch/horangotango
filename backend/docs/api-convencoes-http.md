@@ -9,11 +9,11 @@ Este documento define como os métodos HTTP (`GET`, `POST`, `PUT`, `PATCH`,
 > `POST /auth/login` é `POST /api/auth/login`, e o health check é
 > `GET /api/health`.
 >
-> **Desenho-alvo, não estado atual.** Este documento descreve a API planejada.
-> Hoje existem no código as rotas de `auth`, `staff` e `tools` da tabela da
-> seção 2, além de `GET /api/health`. As de `members`, `loans` e `settings`
-> ainda não estão na `main`. O estado de cada item está no
-> [README do backend](../../README.md#o-que-mudou-desde-a-n1).
+> **N2 e desenho da N3.** Estão implementados health, autenticação, Staff,
+> ferramentas, configuração de prazo, retirada, devolução e consulta dos
+> checklists. As rotas de `members`, listagem de empréstimos, perda e sinalização
+> de divergência são desenho para a N3, identificado na tabela. O estado dos FRs
+> está no [README do projeto](../../README.md#status-dos-requisitos).
 
 ## 1. Semântica adotada por verbo
 
@@ -63,16 +63,45 @@ histórico permanente. "Remoção" de uma Ferramenta é sempre lógica, via
 | `POST` | `/tools` | Cadastra nova Ferramenta (FR-3) | Staff | `201` |
 | `GET` | `/tools/{id}` | Detalha uma Ferramenta | Membro/Staff | `200` |
 | `PATCH` | `/tools/{id}` | Edita dados, inativa ou reativa (FR-4); exige `versao` (optimistic lock) | Staff | `200` |
-| `GET` | `/members/{id}` | Consulta dados e bloqueio do próprio Membro (FR-7) ou de qualquer Membro (Staff, FR-6) | Membro (próprio)/Staff | `200` |
-| `GET` | `/members/{id}/loans` | Histórico de empréstimos do Membro | Membro (próprio)/Staff | `200` |
-| `GET` | `/loans` | Lista empréstimos (Staff filtra por status/membro) | Staff | `200` |
+| `GET` | `/members/{id}` | **N3:** consulta dados e bloqueio do Membro (FR-6/FR-7) | Membro (próprio)/Staff | `200` previsto |
+| `GET` | `/members/{id}/loans` | **N3:** histórico de empréstimos do Membro | Membro (próprio)/Staff | `200` previsto |
+| `GET` | `/loans` | **N3:** lista empréstimos (Staff filtra por status/membro) | Staff | `200` previsto |
 | `POST` | `/loans` | Staff confirma Retirada, com Checklist embutido (FR-9–11); rejeitado com `409` se o Membro tiver empréstimo em atraso (FR-12) | Staff | `201` |
 | `GET` | `/loans/{id}` | Detalha um Empréstimo | Membro (próprio)/Staff | `200` |
 | `GET` | `/loans/{id}/checklists` | Consulta checklist(s) de retirada e devolução lado a lado (FR-14) | Membro (próprio)/Staff | `200` |
-| `POST` | `/loans/{id}/return` | Staff confirma Devolução com Checklist; aceita flag de divergência (FR-13–16) | Staff | `200` |
-| `POST` | `/loans/{id}/loss` | Staff registra Perda, fechando o Empréstimo sem Checklist de devolução (FR-19) | Staff | `200` |
+| `POST` | `/loans/{id}/return` | Staff confirma Devolução com Checklist (FR-13/FR-14/FR-16); flag de divergência é N3 | Staff | `200` |
+| `POST` | `/loans/{id}/loss` | **N3:** Staff registra Perda (FR-19) | Staff | `200` previsto |
 | `GET` | `/settings/return-deadline` | Consulta o prazo padrão configurado | Staff | `200` |
 | `PUT` | `/settings/return-deadline` | Define/atualiza o prazo padrão (FR-8) | Staff | `200` |
+
+### 2.1 Contratos implementados de settings e loans
+
+- `GET /settings/return-deadline`: `200` com `dias` e auditoria; `404` enquanto não configurado.
+  `PUT` recebe `{ "dias": 7 }`, aceita 1 a 365 e responde `200`; forma inválida recebe `400`.
+  Ambos são exclusivos de Staff (`401` sem token, `403` para Membro).
+- `POST /loans`: recebe `ferramentaId`, `membroId` e `checklist`. Responde `201` com o empréstimo.
+  Prazo não configurado, Membro em atraso ou ferramenta indisponível recebem `409`;
+  recurso inexistente recebe `404`; tomador Staff ou checklist incompleto recebem `422`.
+- O checklist tem `estadoFuncional` (`INTACT`/`DEFECTIVE`), `avariasVisiveis` e
+  `acessoriosInclusos`. Declare explicitamente ausência de avarias/acessórios com
+  `"Sem avarias"` e `["Nenhum"]`. Campo ausente, branco ou lista vazia recebe `422`;
+  enum inválido ou tamanho fora do limite recebe `400`.
+- Prazo é a retirada mais N × 24 horas em UTC; alterações não recalculam empréstimos existentes.
+  Após obter o lock da ferramenta, a Retirada revalida o bloqueio e lê os dias vigentes
+  diretamente no banco, para refletir mudanças ocorridas durante a espera.
+  Atraso é derivado de `ACTIVE` com prazo estritamente ultrapassado, sem coluna nem job.
+  O bloqueio é verificado antes do checklist; `message` e `details` identificam todos
+  os empréstimos atrasados, suas ferramentas e o prazo vencido.
+- `POST /loans/{id}/return`: recebe `{ "checklist": { ... } }`, exclusivo de Staff. Responde
+  `200` com empréstimo `RETURNED`, `dataHoraDevolucao`, `staffDevolucaoId` e os dois checklists.
+  A ferramenta passa a `AVAILABLE` na mesma transação. Inexistente recebe `404`, encerrado
+  recebe `409` e checklist incompleto recebe `422`. Devoluções concorrentes não confirmam ambas.
+- `GET /loans/{id}` e `GET /loans/{id}/checklists`: Staff consulta qualquer empréstimo;
+  Membro consulta apenas o próprio (`403` para outro dono, `404` para inexistente).
+  O segundo retorna `emprestimoId`, `checklistRetirada` e `checklistDevolucao`, nulo antes
+  da devolução. Os registros permanecem vinculados mesmo após nova retirada da ferramenta.
+- A devolução do último empréstimo em atraso libera automaticamente novas retiradas;
+  devolver apenas um de vários atrasos mantém o bloqueio. Divergência e perda são N3.
 
 ## 3. Convenção de status codes
 
@@ -84,10 +113,10 @@ histórico permanente. "Remoção" de uma Ferramenta é sempre lógica, via
 | `400 Bad Request` | A requisição não tem a forma esperada: JSON malformado, tipo errado, parâmetro inválido (ex.: `?status=` com valor inexistente) ou falha de Bean Validation em algum campo (obrigatório ausente ou em branco, tamanho, formato de e-mail, `valorEstimado` ≤ 0). Ver 3.1 |
 | `401 Unauthorized` | Requisição sem token válido (ausente, malformado, assinatura errada, expirado ou sem `exp`) em rota que exige autenticação; também login com credenciais inválidas |
 | `403 Forbidden` | Sessão autenticada, mas sem permissão para o recurso (ex.: Membro tentando acessar histórico de outro Membro, ou rota exclusiva de Staff) |
-| `404 Not Found` | Resource referenciado não existe |
+| `404 Not Found` | Resource referenciado não existe; inclui GET do prazo antes da primeira configuração |
 | `405 Method Not Allowed` | Método não suportado na rota (ex.: `DELETE` ou `PUT` em `/tools/{id}`) |
-| `409 Conflict` | Conflito com o estado atual do sistema: identificador já usado (e-mail, código de Ferramenta), `versao` desatualizada no `PATCH` (optimistic lock), mudança de status de Ferramenta emprestada, tentativa de Retirada com Membro bloqueado por inadimplência (FR-12) ou duas Retiradas simultâneas da mesma Ferramenta (RNF de consistência) |
-| `422 Unprocessable Entity` | Corpo bem formado e válido campo a campo, mas que viola uma regra de negócio (ex.: Checklist incompleto, FR-10; `status` não permitido no `PATCH` de Ferramenta). Ver 3.1 |
+| `409 Conflict` | Duplicidade, versão desatualizada, Ferramenta indisponível, prazo não configurado na Retirada, Membro em atraso ou Empréstimo já encerrado; inclui disputas por Retirada/Devolução |
+| `422 Unprocessable Entity` | Checklist incompleto na Retirada ou Devolução (FR-10/FR-14), tomador Staff ou `status` não permitido no `PATCH`. Ver 3.1 |
 | `500 Internal Server Error` | Erro inesperado no servidor. A mensagem é genérica e não expõe detalhe interno; o stack trace fica só no log |
 
 Todo erro volta no mesmo formato JSON (`ErrorResponse`: `timestamp`, `status`,
@@ -106,7 +135,7 @@ Decisão da equipe na N2:
   `@Positive`, `@Email`, `@NotNull` etc.). Exemplo: `PATCH /tools/{id}` sem `versao`.
 - **`422` — regra de negócio.** O corpo está bem formado e cada campo é válido, mas o
   pedido viola uma regra do domínio. Exemplos: Checklist de Conservação sem o mínimo
-  exigido pelo PRD (FR-10) e `PATCH /tools/{id}` pedindo `status` `ON_LOAN`, `LOST` ou
+  exigido pelo PRD (FR-10/FR-14), tomador Staff e `PATCH /tools/{id}` pedindo `status` `ON_LOAN`, `LOST` ou
   `UNDER_REPAIR`, que só os fluxos de Empréstimo, Devolução e Perda podem definir.
 - **`409` — estado atual.** O pedido seria aceito em outro momento, mas conflita com o
   estado atual dos dados: duplicidade, versão desatualizada, Ferramenta emprestada,

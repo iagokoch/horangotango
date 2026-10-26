@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6f1d2c1e-3b8a-4f0e-9c55-6d2a0b7e4a10",
     "name": "Monitoolring API (N2)",
-    "description": "Coleção da API do backend Monitoolring. Pré-requisito: API rodando (ver o README.md na raiz do repositório). Rode a coleção inteira em ordem (Runner ou newman): os requests de login gravam `token` (Staff) e `memberToken` (Membro), e o cadastro de ferramenta grava `toolId`/`toolVersao`. E-mails e códigos são gerados por execução, então a coleção pode rodar várias vezes no mesmo banco.",
+    "description": "API Monitoolring N2. Execute Health → Auth → Staff → Tools → Settings → Loans. Login salva tokens e ids; dados únicos por execução. Settings/Loans validam prazo, retirada, devolução, checklists e permissões. O prazo inicial é restaurado ao final se já existia; caso contrário fica em 7 dias. Atraso e concorrência são cobertos nos ITs com Clock controlável. Use banco de desenvolvimento.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -78,7 +78,8 @@
                   "    pm.expect(login.tipo).to.eql(\"Bearer\");",
                   "    pm.expect(login.usuario.papel).to.eql(\"STAFF\");",
                   "});",
-                  "pm.collectionVariables.set(\"token\", login.token);"
+                  "pm.collectionVariables.set(\"token\", login.token);",
+                  "pm.collectionVariables.set('staffId',pm.response.json().usuario.id);"
                 ]
               }
             }
@@ -301,7 +302,8 @@
                   "pm.test(\"papel MEMBER\", function () {",
                   "    pm.expect(login.usuario.papel).to.eql(\"MEMBER\");",
                   "});",
-                  "pm.collectionVariables.set(\"memberToken\", login.token);"
+                  "pm.collectionVariables.set(\"memberToken\", login.token);",
+                  "pm.collectionVariables.set('memberId',pm.response.json().usuario.id);"
                 ]
               }
             }
@@ -1579,6 +1581,1709 @@
           }
         }
       ]
+    },
+    {
+      "name": "Settings",
+      "description": "Prazo padrão (FR-8): consulta, configuração, limites e permissões. O valor inicial é restaurado ao fim de Loans quando já existia.",
+      "item": [
+        {
+          "name": "Consultar prazo atual (200 ou 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('prazo existente ou ainda não configurado', () => pm.expect(pm.response.code).to.be.oneOf([200,404]));",
+                  "const current=pm.response.json();",
+                  "pm.collectionVariables.set('initialReturnDeadlineDays',pm.response.code===200?current.dias:7);",
+                  "if(pm.response.code===404) pm.test('404 no formato ErrorResponse', () => pm.expect(current).to.include.all.keys('timestamp','status','error','message','details'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Definir prazo de 7 dias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('dias gravados',()=>pm.expect(pm.response.json().dias).to.eql(7));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dias\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar prazo configurado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('prazo de 7 dias',()=>pm.expect(pm.response.json().dias).to.eql(7));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Definir prazo inválido 0 (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dias\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Definir prazo inválido 366 (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(400); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dias\": 366\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar prazo - Membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(403); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Definir prazo - Membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(403); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dias\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar prazo - sem token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(401); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Loans",
+      "description": "Retirada, preservação de prazo, devolução e consulta comparativa. Usa dados únicos. Atraso e concorrência são cobertos nos ITs com Clock controlável, sem espera de dias na coleção.",
+      "item": [
+        {
+          "name": "Registrar outro Membro para testar dono",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('otherMemberEmail','membro.loan.'+pm.variables.replaceIn('{{$guid}}')+'@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Outro Membro\",\n  \"email\": \"{{otherMemberEmail}}\",\n  \"senha\": \"{{memberPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login do outro Membro",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('otherMemberToken',pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{otherMemberEmail}}\",\n  \"senha\": \"{{memberPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cadastrar ferramenta para retirada",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('loanToolCode','LN'+pm.variables.replaceIn('{{$guid}}').replace(/-/g,'').slice(0,12));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('loanToolId',pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{loanToolCode}}\",\n  \"nome\": \"Furadeira da coleção\",\n  \"categoria\": \"Elétricas\",\n  \"valorEstimado\": 350,\n  \"estadoConservacao\": \"Nova\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cadastrar segunda ferramenta",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('loanToolCode','LN'+pm.variables.replaceIn('{{$guid}}').replace(/-/g,'').slice(0,12));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('secondLoanToolId',pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tools"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{loanToolCode}}\",\n  \"nome\": \"Furadeira da coleção\",\n  \"categoria\": \"Elétricas\",\n  \"valorEstimado\": 350,\n  \"estadoConservacao\": \"Nova\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Retirada sem checklist (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(422); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{loanToolId}}\",\n  \"membroId\": \"{{memberId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Retirada com tomador Staff (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(422); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{loanToolId}}\",\n  \"membroId\": \"{{staffId}}\",\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Retirada - Membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(403); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{loanToolId}}\",\n  \"membroId\": \"{{memberId}}\",\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Retirada - sem token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(401); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{loanToolId}}\",\n  \"membroId\": \"{{memberId}}\",\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Confirmar retirada com checklist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const loan=pm.response.json();",
+                  "pm.test('empréstimo e checklist de retirada',()=>{pm.expect(loan.status).to.eql('ACTIVE');pm.expect(loan.diasPrazo).to.eql(7);pm.expect(loan.checklistRetirada.tipo).to.eql('CHECKOUT');pm.expect(loan.checklistDevolucao).to.eql(null);});",
+                  "pm.collectionVariables.set('loanId',loan.id);",
+                  "pm.collectionVariables.set('loanDeadline',loan.prazoDevolucao);",
+                  "pm.collectionVariables.set('checkoutChecklistId',loan.checklistRetirada.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{loanToolId}}\",\n  \"membroId\": \"{{memberId}}\",\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar próprio empréstimo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar empréstimo como Staff",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar empréstimo de outro Membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(403); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{otherMemberToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Checklists antes da devolução",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('checklist de devolução ainda nulo',()=>{const v=pm.response.json();pm.expect(v.emprestimoId).to.eql(pm.collectionVariables.get('loanId'));pm.expect(v.checklistRetirada.tipo).to.eql('CHECKOUT');pm.expect(v.checklistDevolucao).to.eql(null);});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/checklists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "checklists"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Checklists de outro Membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(403); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/checklists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "checklists"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{otherMemberToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Retirada de ferramenta já emprestada (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(409); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{loanToolId}}\",\n  \"membroId\": \"{{memberId}}\",\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Alterar prazo para novas retiradas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dias\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Empréstimo existente preserva seu prazo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('prazo antigo preservado',()=>{const v=pm.response.json();pm.expect(v.diasPrazo).to.eql(7);pm.expect(v.prazoDevolucao).to.eql(pm.collectionVariables.get('loanDeadline'));});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Nova retirada usa prazo atualizado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('nova retirada com 30 dias',()=>pm.expect(pm.response.json().diasPrazo).to.eql(30));",
+                  "pm.collectionVariables.set('secondLoanId',pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{secondLoanToolId}}\",\n  \"membroId\": \"{{memberId}}\",\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Devolução com checklist incompleto (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(422); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checklist\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Devolução - Membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(403); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "return"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Confirmar devolução com checklist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devolução auditada e retirada preservada',()=>{const v=pm.response.json();pm.expect(v.status).to.eql('RETURNED');pm.expect(v.staffDevolucaoId).to.eql(pm.collectionVariables.get('staffId'));pm.expect(v.dataHoraDevolucao).to.be.a('string');pm.expect(v.checklistRetirada.id).to.eql(pm.collectionVariables.get('checkoutChecklistId'));pm.expect(v.checklistDevolucao.tipo).to.eql('RETURN');});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Ferramenta devolvida está disponível",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('AVAILABLE',()=>pm.expect(pm.response.json().status).to.eql('AVAILABLE'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tools/{{loanToolId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tools",
+                "{{loanToolId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comparar checklists após devolução",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('CHECKOUT e RETURN permanentemente vinculados',()=>{const v=pm.response.json();pm.expect(v.emprestimoId).to.eql(pm.collectionVariables.get('loanId'));pm.expect(v.checklistRetirada.id).to.eql(pm.collectionVariables.get('checkoutChecklistId'));pm.expect(v.checklistDevolucao.tipo).to.eql('RETURN');});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/checklists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "checklists"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Devolução repetida (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(409); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Retirar novamente ferramenta devolvida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('reborrowLoanId',pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ferramentaId\": \"{{loanToolId}}\",\n  \"membroId\": \"{{memberId}}\",\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Checklists antigos continuam consultáveis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('CHECKOUT e RETURN permanentemente vinculados',()=>{const v=pm.response.json();pm.expect(v.emprestimoId).to.eql(pm.collectionVariables.get('loanId'));pm.expect(v.checklistRetirada.id).to.eql(pm.collectionVariables.get('checkoutChecklistId'));pm.expect(v.checklistDevolucao.tipo).to.eql('RETURN');});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{loanId}}/checklists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{loanId}}",
+                "checklists"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Devolver nova retirada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{reborrowLoanId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{reborrowLoanId}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Devolver segunda ferramenta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/{{secondLoanId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "{{secondLoanId}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar empréstimo inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(404); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/nao-existe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "nao-existe"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Checklists de empréstimo inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(404); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/nao-existe/checklists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "nao-existe",
+                "checklists"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Devolução de empréstimo inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ErrorResponse completo', () => { const e=pm.response.json(); pm.expect(e.status).to.eql(404); pm.expect(e).to.include.all.keys('timestamp','status','error','message','details'); pm.expect(e.details).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/loans/nao-existe/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loans",
+                "nao-existe",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checklist\": {\n    \"estadoFuncional\": \"INTACT\",\n    \"avariasVisiveis\": \"Sem avarias\",\n    \"acessoriosInclusos\": [\n      \"Maleta\",\n      \"Broca\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Restaurar prazo inicial",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/return-deadline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "return-deadline"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"dias\": {{initialReturnDeadlineDays}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -1625,6 +3330,71 @@
     {
       "key": "toolVersaoAntiga",
       "value": "0"
+    },
+    {
+      "key": "staffId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memberId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "initialReturnDeadlineDays",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otherMemberEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otherMemberToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loanToolCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loanToolId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "secondLoanToolId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loanId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "loanDeadline",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "checkoutChecklistId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "secondLoanId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reborrowLoanId",
+      "value": "",
+      "type": "string"
     }
   ]
 }

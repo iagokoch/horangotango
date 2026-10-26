@@ -5,8 +5,8 @@ quem retirou cada ferramenta, registra seu estado de conservação e acompanha o
 de devolução. Membros consultam o catálogo; o Staff confirma retiradas e devoluções.
 
 A regra crítica do projeto é: **quem tem empréstimo em atraso não pode retirar outra
-ferramenta até resolver todas as pendências**. A implementação desse bloqueio e do fluxo
-de devolução ainda está planejada para a N2; veja o [status dos requisitos](#status-dos-requisitos).
+ferramenta até resolver todas as pendências**. O backend já implementa esse bloqueio e o fluxo
+de devolução com checklist; veja o [status dos requisitos](#status-dos-requisitos).
 
 Este é o monorepo [iagokoch/horangotango](https://github.com/iagokoch/horangotango), com
 `backend/`, `frontend/` e documentação. O projeto acadêmico evolui em três entregas:
@@ -60,13 +60,13 @@ Este é o monorepo [iagokoch/horangotango](https://github.com/iagokoch/horangota
 | Perda | Encerramento de empréstimo sem devolução física por perda, furto ou destruição da ferramenta (N3) |
 
 O diagrama representa o **ciclo previsto**, incluindo funcionalidades ainda não implementadas.
-A retirada já está na `main`; a devolução está planejada para N2; divergência e perda são N3.
+Retirada, devolução e liberação do bloqueio estão implementadas; divergência e perda são N3.
 
 ```mermaid
 stateDiagram-v2
     [*] --> AVAILABLE: Cadastro
     AVAILABLE --> ON_LOAN: Retirada confirmada
-    ON_LOAN --> AVAILABLE: Devolução sem divergência (planejada N2)
+    ON_LOAN --> AVAILABLE: Devolução (N2)
     ON_LOAN --> UNDER_REPAIR: Devolução com divergência (N3)
     ON_LOAN --> LOST: Registro de perda ou furto (N3)
     AVAILABLE --> INACTIVE: Inativação por Staff
@@ -80,7 +80,7 @@ stateDiagram-v2
 Os cinco valores de `ToolStatus` já existem no backend. O `PATCH` permite atribuir apenas
 `AVAILABLE` ou `INACTIVE` e rejeita a mudança de status de uma ferramenta `ON_LOAN` com
 `409`. Os outros estados são definidos pelos fluxos de negócio. O empréstimo usa os valores
-`ACTIVE`, `RETURNED` e `LOST`; o atraso será derivado em tempo real, sem coluna própria nem job.
+`ACTIVE`, `RETURNED` e `LOST`; o atraso é derivado em tempo real, sem coluna própria nem job.
 
 ## Estrutura do monorepo
 
@@ -102,8 +102,7 @@ horangotango/
 ## Status dos requisitos
 
 A referência é o [PRD](backend/docs/prd.md). **✅ na `main`** indica código implementado;
-**📋 planejado na N2** indica trabalho restante desta entrega; **➡️ N3** indica escopo
-reservado para a continuidade. Uma issue aberta não significa, por si só, ausência de código.
+**➡️ N3** indica escopo reservado para a continuidade. Uma issue aberta não significa, por si só, ausência de código.
 
 | FR | Requisito | Status | Issue |
 |---|---|---|---|
@@ -118,17 +117,17 @@ reservado para a continuidade. Uma issue aberta não significa, por si só, aus�
 | FR-9 | Solicitação de Retirada | ✅ na `main` | [#4](https://github.com/iagokoch/horangotango/issues/4) |
 | FR-10 | Checklist de Conservação na Retirada | ✅ na `main` | [#4](https://github.com/iagokoch/horangotango/issues/4) |
 | FR-11 | Confirmação de Retirada e prazo de devolução | ✅ na `main` | [#4](https://github.com/iagokoch/horangotango/issues/4) |
-| FR-12 | Bloqueio de Retirada por Inadimplência (RN Crítica) | 📋 planejado na N2 | [#5](https://github.com/iagokoch/horangotango/issues/5) |
-| FR-13 | Registro de Devolução | 📋 planejado na N2 | [#6](https://github.com/iagokoch/horangotango/issues/6) |
-| FR-14 | Checklist de Conservação na Devolução | 📋 planejado na N2 | [#6](https://github.com/iagokoch/horangotango/issues/6) |
+| FR-12 | Bloqueio de Retirada por Inadimplência (RN Crítica) | ✅ na `main` | [#5](https://github.com/iagokoch/horangotango/issues/5) |
+| FR-13 | Registro de Devolução | ✅ na `main` | [#6](https://github.com/iagokoch/horangotango/issues/6) |
+| FR-14 | Checklist de Conservação na Devolução | ✅ na `main` | [#6](https://github.com/iagokoch/horangotango/issues/6) |
 | FR-15 | Fluxo de decisão em divergência de Checklist | ➡️ N3 | [#15](https://github.com/iagokoch/horangotango/issues/15) |
-| FR-16 | Atualização de disponibilidade pós-Devolução | 📋 planejado na N2 | [#6](https://github.com/iagokoch/horangotango/issues/6) |
-| FR-17 | Marcação automática de Atraso | 📋 planejado na N2 | [#5](https://github.com/iagokoch/horangotango/issues/5) |
-| FR-18 | Liberação automática de Bloqueio | 📋 planejado na N2 | [#5](https://github.com/iagokoch/horangotango/issues/5) |
+| FR-16 | Atualização de disponibilidade pós-Devolução | ✅ na `main` | [#6](https://github.com/iagokoch/horangotango/issues/6) |
+| FR-17 | Marcação automática de Atraso | ✅ na `main` | [#5](https://github.com/iagokoch/horangotango/issues/5) |
+| FR-18 | Liberação automática de Bloqueio | ✅ na `main` | [#5](https://github.com/iagokoch/horangotango/issues/5) |
 | FR-19 | Registro de Perda de Ferramenta | ➡️ N3 | [#16](https://github.com/iagokoch/horangotango/issues/16) |
 
-Estado atual: **9 FRs implementados**, **6 planejados para completar os 15 da N2** e **4 para
-N3**. A meta de 15 requisitos representa o escopo da entrega, não a quantidade já concluída.
+Estado atual do backend: **15 FRs implementados na N2** e **4 reservados para N3**.
+A release v2.0 é uma etapa separada; a implementação não significa que a release já foi publicada.
 
 Backlog por entrega: [N2 — v2.0](https://github.com/iagokoch/horangotango/milestone/1) e
 [N3](https://github.com/iagokoch/horangotango/milestone/2). A cobertura dos FRs acima se refere
@@ -284,12 +283,13 @@ em `403`. O `GET` de empréstimo também verifica o dono no service.
 | `PATCH` | `/api/tools/{id}` | STAFF | `200` | `400` dados inválidos; `404` inexistente; `409` versão ou estado atual; `422` status não atribuível |
 | `GET` | `/api/settings/return-deadline` | STAFF | `200` | `404` prazo ainda não configurado |
 | `PUT` | `/api/settings/return-deadline` | STAFF | `200` | `400` campo `dias` ausente ou fora de 1 a 365 |
-| `POST` | `/api/loans` | STAFF | `201` | `400` forma inválida; `404` ferramenta ou membro inexistente; `409` prazo não configurado, ferramenta indisponível ou disputa por retirada; `422` checklist incompleto ou tomador Staff |
+| `POST` | `/api/loans` | STAFF | `201` | `400` forma inválida; `404` ferramenta ou membro inexistente; `409` prazo não configurado, membro em atraso, ferramenta indisponível ou disputa por retirada; `422` checklist incompleto ou tomador Staff |
 | `GET` | `/api/loans/{id}` | MEMBER dono / STAFF | `200` | `403` empréstimo de outro membro; `404` inexistente |
+| `GET` | `/api/loans/{id}/checklists` | MEMBER dono / STAFF | `200` | `403` empréstimo de outro membro; `404` inexistente |
+| `POST` | `/api/loans/{id}/return` | STAFF | `200` | `400` forma inválida; `404` inexistente; `409` já encerrado; `422` checklist incompleto |
 
 `PUT` e `DELETE /api/tools/{id}` não são suportados. Staff recebe `405`; um Membro pode
-receber `403` antes do roteamento pela restrição do prefixo. `POST /api/loans/{id}/return`
-e `GET /api/loans/{id}/checklists` ainda são **planejados para N2** e não integram esta tabela.
+receber `403` antes do roteamento pela restrição do prefixo.
 
 O prazo vigente é copiado para o empréstimo: `prazoDevolucao = dataHoraRetirada + diasPrazo × 24h`,
 em UTC. Mudar a configuração só afeta novas retiradas. O checklist de retirada exige
@@ -297,6 +297,20 @@ em UTC. Mudar a configuração só afeta novas retiradas. O checklist de retirad
 Ausência de avarias ou acessórios deve ser explícita (por exemplo, `"Sem avarias"` e `["Nenhum"]`);
 campos vazios não completam o checklist e recebem `422`. A retirada é transacional, com lock
 na ferramenta e índice único para impedir dois empréstimos ativos da mesma ferramenta.
+Depois de obter o lock, revalida o atraso e consulta os dias vigentes diretamente no banco:
+uma espera pela ferramenta não permite confirmar com bloqueio ou prazo desatualizados.
+
+Atraso é `ACTIVE` com prazo estritamente anterior ao instante do `Clock` UTC. A tentativa de
+retirada recebe `409` antes do checklist, com todos os empréstimos atrasados, identificadores
+das ferramentas e prazos vencidos em `message` e `details`. Resolver o último atraso libera
+automaticamente uma nova retirada.
+
+A devolução recebe `{ "checklist": { "estadoFuncional": "INTACT", "avariasVisiveis": "Sem avarias",
+"acessoriosInclusos": ["Nenhum"] } }`, encerra o empréstimo como `RETURNED` e libera a ferramenta
+como `AVAILABLE` na mesma transação. Registra `dataHoraDevolucao`, `staffDevolucaoId` e
+`checklistDevolucao` sem alterar a retirada. O sub-resource `checklists` retorna
+`emprestimoId`, `checklistRetirada` e `checklistDevolucao` (nulo antes da devolução).
+O lock do empréstimo impede duas devoluções bem-sucedidas. Sinalização de divergência é N3.
 
 Também são públicos o Swagger (`/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**`),
 os endpoints Actuator expostos (`/actuator/health`, `/actuator/info`) e o despacho de erros
@@ -324,7 +338,7 @@ Erros tratados pelo Spring MVC e pelos handlers de autenticação/autorização 
 | `403` | Papel ou dono sem permissão |
 | `404` | Recurso inexistente, inclusive prazo ainda não configurado no GET |
 | `405` | Método não suportado na rota, após autorização |
-| `409` | Conflito com o estado atual: duplicidade, versão, indisponibilidade ou prazo não configurado na retirada |
+| `409` | Conflito com o estado atual: duplicidade, versão, indisponibilidade, prazo não configurado, bloqueio por atraso ou empréstimo já encerrado |
 | `415` | Tipo de conteúdo não suportado |
 | `422` | Regra de negócio violada: checklist incompleto, tomador Staff ou status não atribuível |
 | `500` | Erro inesperado; mensagem genérica, com detalhe interno apenas no log |
@@ -342,15 +356,15 @@ para chamar as rotas protegidas.
 
 A [coleção Postman](backend/docs/postman/monitoolring.postman_collection.json) usa o formato
 v2.1 e pode ser importada no Postman ou Insomnia. Execute as pastas em ordem:
-**Health → Auth → Staff → Tools**. A coleção grava os tokens e identificadores necessários
+**Health → Auth → Staff → Tools → Settings → Loans**. A coleção grava os tokens e identificadores necessários
 e usa dados únicos por execução. O passo a passo está no
 [guia de testes manuais](backend/docs/testing-manual.md).
 
-**A coleção ainda não cobre settings e loans.** A ampliação da coleção e das respostas
-de erro no Swagger está pendente em
-[#11 — [Docs] Coleção Postman versionada e Swagger atualizado](https://github.com/iagokoch/horangotango/issues/11).
-Os guias de API também contêm descrições do desenho-alvo; use a tabela de endpoints acima
-para identificar o que já foi implementado.
+As pastas Settings e Loans cobrem configuração, retirada, devolução, checklists, preservação
+de prazo e erros de permissão/estado. O Swagger descreve os schemas de sucesso e
+`ErrorResponse` dessas rotas ([#11](https://github.com/iagokoch/horangotango/issues/11)).
+Atraso e concorrência são verificados pelos ITs com relógio controlável e PostgreSQL.
+Os guias também identificam rotas previstas para a N3.
 
 ### Estrutura de pacotes
 
@@ -395,7 +409,7 @@ contratos e decisões do projeto. O status de implementação está na tabela de
 | [Nomenclatura de recursos](backend/docs/api-nomenclatura-recursos.md) | Recursos, rotas e estados da API |
 | [Justificativa técnica](backend/docs/api-justificativa-tecnica.md) | Motivos das decisões de API |
 | [Guia de testes manuais](backend/docs/testing-manual.md) | Fluxo manual com Postman, Insomnia e curl |
-| [Coleção Postman](backend/docs/postman/monitoolring.postman_collection.json) | Requisições e asserções de Health, Auth, Staff e Tools |
+| [Coleção Postman](backend/docs/postman/monitoolring.postman_collection.json) | Requisições e asserções de Health, Auth, Staff, Tools, Settings e Loans |
 | [Engenharia de Requisitos — N2](backend/docs/requisitos-n2/README.md) | Visão e escopo, ERS, casos de uso, diagramas UML, matriz de rastreabilidade e plano de continuidade para N3 |
 
 Os artefatos em `backend/docs/requisitos-n2/` foram elaborados por outros integrantes.
@@ -462,13 +476,16 @@ Além da reorganização em monorepo e das instruções corrigidas de setup, já
 - Health e despacho `/error` liberados; JWT sem expiração recusado; erros do MVC, inclusive
   JSON malformado e erros inesperados, no formato `ErrorResponse`
   ([#9](https://github.com/iagokoch/horangotango/issues/9)).
-- README na raiz, guia manual atualizado, coleção Postman de Health/Auth/Staff/Tools e
-  documentação inicial do Swagger. A cobertura de settings e loans ainda precisa ser ampliada
-  ([#11](https://github.com/iagokoch/horangotango/issues/11)).
+- FR-12/FR-17/FR-18: atraso calculado com `Clock`, bloqueio com `409` antes do checklist e
+  liberação automática quando não há atrasos ([#5](https://github.com/iagokoch/horangotango/issues/5)).
+- FR-13/FR-14/FR-16: devolução auditada e transacional, checklist `RETURN`, consulta dos dois
+  checklists e ferramenta disponível; devolução duplicada recebe `409`
+  ([#6](https://github.com/iagokoch/horangotango/issues/6)).
+- README na raiz, guia manual e coleção Postman com Settings e Loans, e Swagger com schemas
+  de resposta e erro ([#11](https://github.com/iagokoch/horangotango/issues/11)).
 
-Para completar os **15 FRs da N2**, faltam atraso/bloqueio/liberação (FR-12/FR-17/FR-18) e
-fluxo de devolução/checklist/disponibilidade (FR-13/FR-14/FR-16). Veja os estados e links na
-[tabela de requisitos](#status-dos-requisitos). O registro de divergência (FR-15) permanece N3.
+Os **15 FRs do escopo da N2** estão implementados no backend. O registro de divergência
+(FR-15) permanece na N3; veja a [tabela de requisitos](#status-dos-requisitos).
 
 ## Pendências para a N3
 

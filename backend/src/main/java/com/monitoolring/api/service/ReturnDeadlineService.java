@@ -26,6 +26,12 @@ public class ReturnDeadlineService {
                 .orElseThrow(ReturnDeadlineNotConfiguredException::new);
     }
 
+    /** Lê os dias vigentes no banco, inclusive após uma espera por lock na mesma transação. */
+    public int getCurrentDays() {
+        return repository.findDiasById(ReturnDeadlineSetting.SINGLETON_ID)
+                .orElseThrow(ReturnDeadlineNotConfiguredException::new);
+    }
+
     /** Substitui o prazo padrão por inteiro (PUT). Vale só para Retiradas confirmadas daqui em diante. */
     public ReturnDeadlineSetting define(int dias, String idUsuario) {
         try {
