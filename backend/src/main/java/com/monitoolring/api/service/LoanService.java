@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.monitoolring.api.domain.Checklist;
@@ -118,8 +119,12 @@ public class LoanService {
         return new LoanDetails(loan, checklistRetirada, checklistDevolucao);
     }
 
-    /** Staff vê qualquer Empréstimo; Membro só os próprios (FR-7) — 403 para os de outro Membro. */
-    @Transactional(readOnly = true)
+    /**
+     * Staff vê qualquer Empréstimo; Membro só os próprios (FR-7) — 403 para os de outro Membro.
+     * O mesmo snapshot cobre Empréstimo e Checklists, mesmo se uma Devolução confirmar entre as
+     * consultas. A leitura não adquire locks de escrita.
+     */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public LoanDetails findById(String id, String idUsuario, UserRole papel) {
         Loan loan = loanRepository.findById(id).orElseThrow(() -> new LoanNotFoundException(id));
         if (papel != UserRole.STAFF && !loan.pertenceAoMembro(idUsuario)) {
