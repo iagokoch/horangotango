@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -34,7 +36,11 @@ public class ToolService {
         Instant now = Instant.now();
         Tool tool = Tool.criar(UUID.randomUUID().toString(), request.codigo(), request.nome(),
                 request.categoria(), request.valorEstimado(), request.estadoConservacao(), idUsuario, now);
-        return toolRepository.save(tool);
+        try {
+            return toolRepository.save(tool);
+        } catch (DataIntegrityViolationException ex) {
+            throw translateCodigoConflict(ex, tool.getCodigo());
+        }
     }
 
     /** Catálogo ordenado por código; {@code status} nulo lista todas as Ferramentas. */
@@ -63,7 +69,20 @@ public class ToolService {
             return toolRepository.saveAndFlush(tool);
         } catch (OptimisticLockingFailureException ex) {
             throw new ToolVersionConflictException(id, request.versao(), tool.getVersao());
+        } catch (DataIntegrityViolationException ex) {
+            throw translateCodigoConflict(ex, tool.getCodigo());
         }
+    }
+
+    private RuntimeException translateCodigoConflict(DataIntegrityViolationException ex, String codigo) {
+        // The precheck improves feedback, but the unique constraint arbitrates concurrent writes.
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation
+                    && "uq_ferramentas_codigo".equals(violation.getConstraintName())) {
+                return new DuplicateToolCodigoException(codigo);
+            }
+        }
+        return ex;
     }
 
     private void assertCodigoAvailable(String codigo) {
