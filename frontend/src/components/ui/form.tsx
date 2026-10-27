@@ -70,7 +70,7 @@ const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
     const id = React.useId();
     return (
       <FormItemContext.Provider value={{ id }}>
-        <div ref={ref} className={cn("space-y-1.5", className)} {...props} />
+        <div ref={ref} className={cn("space-y-2", className)} {...props} />
       </FormItemContext.Provider>
     );
   },
@@ -85,7 +85,7 @@ const FormLabel = React.forwardRef<
   return (
     <Label ref={ref} className={cn("flex items-baseline gap-1.5", className)} htmlFor={formItemId} {...props}>
       {children}
-      {opcional && <span className="text-xs font-normal text-muted-foreground">opcional</span>}
+      {opcional && <span className="text-sm font-normal text-subtle">(opcional)</span>}
     </Label>
   );
 });
@@ -112,7 +112,7 @@ const FormDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
   ({ className, ...props }, ref) => {
     const { formDescriptionId } = useFormField();
     return (
-      <p ref={ref} id={formDescriptionId} className={cn("text-xs text-muted-foreground", className)} {...props} />
+      <p ref={ref} id={formDescriptionId} className={cn("text-sm text-muted-foreground", className)} {...props} />
     );
   },
 );
@@ -130,10 +130,10 @@ const FormMessage = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<
         ref={ref}
         id={formMessageId}
         role="alert"
-        className={cn("flex items-start gap-1.5 text-xs font-medium text-destructive", className)}
+        className={cn("flex items-start gap-1.5 text-sm font-medium text-destructive animate-in fade-in-0 slide-in-from-top-0.5", className)}
         {...props}
       >
-        <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden />
+        <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
         {body}
       </p>
     );

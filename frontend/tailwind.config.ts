@@ -1,8 +1,8 @@
 import type { Config } from "tailwindcss";
 import { fontFamily } from "tailwindcss/defaultTheme";
 
-// Tokens do design system Monitoolring. Os valores ficam em variáveis CSS (globals.css) para que
-// os temas claro ("Concreto") e escuro ("Grafite") troquem só as variáveis, não as classes.
+// Tokens do design system "Etiqueta & Bancada". Os valores ficam em variáveis CSS (globals.css):
+// o tema escuro troca só as variáveis, nunca as classes.
 const token = (nome: string) => `hsl(var(--${nome}) / <alpha-value>)`;
 
 const config: Config = {
@@ -19,23 +19,26 @@ const config: Config = {
         sans: ["var(--font-sans)", ...fontFamily.sans],
         mono: ["var(--font-mono)", ...fontFamily.mono],
       },
+      // Escala clássica (Bringhurst) adaptada a produto operacional: 14px é o corpo padrão.
       fontSize: {
-        // Escala compacta de produto operacional: 13px é o corpo padrão das tabelas.
-        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.02em" }],
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
         xs: ["0.75rem", { lineHeight: "1.125rem" }],
         sm: ["0.8125rem", { lineHeight: "1.25rem" }],
         base: ["0.875rem", { lineHeight: "1.375rem" }],
         lg: ["1rem", { lineHeight: "1.5rem" }],
-        xl: ["1.25rem", { lineHeight: "1.75rem", letterSpacing: "-0.01em" }],
-        "2xl": ["1.5rem", { lineHeight: "2rem", letterSpacing: "-0.02em" }],
-        "3xl": ["2rem", { lineHeight: "2.375rem", letterSpacing: "-0.025em" }],
-        "4xl": ["2.75rem", { lineHeight: "3rem", letterSpacing: "-0.03em" }],
+        xl: ["1.125rem", { lineHeight: "1.625rem", letterSpacing: "-0.005em" }],
+        "2xl": ["1.3125rem", { lineHeight: "1.75rem", letterSpacing: "-0.01em" }],
+        "3xl": ["1.5rem", { lineHeight: "1.875rem", letterSpacing: "-0.015em" }],
+        "4xl": ["2rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em" }],
+        "5xl": ["3rem", { lineHeight: "3rem", letterSpacing: "-0.03em" }],
+        "6xl": ["4.5rem", { lineHeight: "4.25rem", letterSpacing: "-0.035em" }],
       },
       colors: {
         border: token("border"),
         "border-strong": token("border-strong"),
         input: token("input"),
         ring: token("ring"),
+        canvas: token("canvas"),
         background: token("background"),
         foreground: token("foreground"),
         surface: {
@@ -48,10 +51,12 @@ const config: Config = {
           foreground: token("primary-foreground"),
           hover: token("primary-hover"),
         },
+        // Amarelo-etiqueta: marca o que está selecionado, ativo ou em foco. Nunca é cor de status.
         brand: {
           DEFAULT: token("brand"),
           ink: token("brand-ink"),
           soft: token("brand-soft"),
+          foreground: token("brand-foreground"),
         },
         secondary: {
           DEFAULT: token("secondary"),
@@ -88,31 +93,58 @@ const config: Config = {
           overdue: token("status-overdue"),
         },
       },
+      // Raio por hierarquia: folha > painel > controle > etiqueta.
       borderRadius: {
-        xl: "calc(var(--radius) + 4px)",
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        sheet: "1rem",
+        xl: "0.875rem",
+        lg: "0.75rem",
+        md: "0.5rem",
+        sm: "0.375rem",
+        tag: "0.25rem",
       },
       boxShadow: {
         hairline: "0 0 0 1px hsl(var(--border))",
-        raised: "0 1px 0 0 hsl(var(--shadow) / 0.04), 0 1px 3px 0 hsl(var(--shadow) / 0.06)",
-        overlay: "0 12px 32px -8px hsl(var(--shadow) / 0.28), 0 0 0 1px hsl(var(--border))",
+        raised: "0 1px 0 0 hsl(var(--shadow) / 0.03), 0 1px 2px 0 hsl(var(--shadow) / 0.05)",
+        sheet: "0 0 0 1px hsl(var(--border)), 0 1px 3px 0 hsl(var(--shadow) / 0.05)",
+        overlay: "0 16px 40px -12px hsl(var(--shadow) / 0.32), 0 0 0 1px hsl(var(--border))",
+        focus: "0 0 0 3px hsl(var(--brand) / 0.45)",
+      },
+      transitionTimingFunction: {
+        out: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
       keyframes: {
-        "fade-up": {
-          from: { opacity: "0", transform: "translateY(4px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
+        "segment-grow": {
+          from: { transform: "scaleX(0)" },
+          to: { transform: "scaleX(1)" },
         },
-        pulse_ring: {
+        "stamp-in": {
+          "0%": { opacity: "0", transform: "rotate(-7deg) scale(1.25)" },
+          "60%": { opacity: "1", transform: "rotate(-4deg) scale(0.97)" },
+          "100%": { opacity: "1", transform: "rotate(-4deg) scale(1)" },
+        },
+        "pulse-ring": {
           "0%": { boxShadow: "0 0 0 0 hsl(var(--status-overdue) / 0.45)" },
           "70%": { boxShadow: "0 0 0 6px hsl(var(--status-overdue) / 0)" },
           "100%": { boxShadow: "0 0 0 0 hsl(var(--status-overdue) / 0)" },
         },
+        shimmer: {
+          from: { backgroundPosition: "200% 0" },
+          to: { backgroundPosition: "-200% 0" },
+        },
+        // Etiqueta pendurada que cai no gancho e balança até parar no ângulo final (--giro).
+        "swing-in": {
+          "0%": { opacity: "0", transform: "translateY(-18px) rotate(10deg)" },
+          "45%": { opacity: "1", transform: "translateY(0) rotate(-6deg)" },
+          "70%": { transform: "rotate(3deg)" },
+          "100%": { opacity: "1", transform: "rotate(var(--giro, 0deg))" },
+        },
       },
       animation: {
-        "fade-up": "fade-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both",
-        "pulse-ring": "pulse_ring 2s ease-out infinite",
+        "segment-grow": "segment-grow 700ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "stamp-in": "stamp-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "pulse-ring": "pulse-ring 2.4s ease-out infinite",
+        shimmer: "shimmer 1.6s linear infinite",
+        "swing-in": "swing-in 1100ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },

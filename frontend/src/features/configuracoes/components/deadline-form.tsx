@@ -60,7 +60,7 @@ export function DeadlineForm({ diasAtuais }: { diasAtuais: number | null }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(salvar)} noValidate className="space-y-4">
+      <form onSubmit={form.handleSubmit(salvar)} noValidate className="space-y-5">
         <FormField
           control={form.control}
           name="dias"
@@ -68,18 +68,18 @@ export function DeadlineForm({ diasAtuais }: { diasAtuais: number | null }) {
             <FormItem>
               <FormLabel>Dias corridos para devolução</FormLabel>
               <div className="flex items-center gap-2">
-                <Button type="button" variant="secondary" size="icon" onClick={() => ajustar(-1)} aria-label="Diminuir um dia">
+                <Button type="button" variant="secondary" size="icon" className="size-12" onClick={() => ajustar(-1)} aria-label="Diminuir um dia">
                   <Minus aria-hidden />
                 </Button>
                 <FormControl>
                   <Input
                     {...field}
                     inputMode="numeric"
-                    className="w-24 text-center font-mono text-lg tabular"
+                    className="h-12 w-28 text-center font-display text-2xl font-bold tabular"
                     onChange={(evento) => field.onChange(evento.target.value.replace(/\D/g, "").slice(0, 3))}
                   />
                 </FormControl>
-                <Button type="button" variant="secondary" size="icon" onClick={() => ajustar(1)} aria-label="Aumentar um dia">
+                <Button type="button" variant="secondary" size="icon" className="size-12" onClick={() => ajustar(1)} aria-label="Aumentar um dia">
                   <Plus aria-hidden />
                 </Button>
               </div>
@@ -96,8 +96,8 @@ export function DeadlineForm({ diasAtuais }: { diasAtuais: number | null }) {
               aria-pressed={valor === dias}
               onClick={() => form.setValue("dias", String(dias), { shouldValidate: true })}
               className={cn(
-                "rounded-full border px-3 py-1 font-mono text-xs transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                valor === dias ? "border-foreground bg-foreground text-background" : "text-muted-foreground",
+                "tabular inline-flex h-8 items-center rounded-full border px-3.5 text-sm font-medium transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                valor === dias ? "border-brand bg-brand text-brand-foreground hover:border-brand" : "text-muted-foreground",
               )}
             >
               {dias} dias

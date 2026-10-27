@@ -24,9 +24,8 @@ export default async function NovaRetiradaPage({ searchParams }: { searchParams:
   return (
     <>
       <PageHeader
-        eyebrow="Balcão · Retirada"
         title="Registrar retirada"
-        description="Selecione a ferramenta, identifique o membro e registre o checklist junto com ele. A API verifica disponibilidade e pendências em atraso."
+        description="Escolha a ferramenta, identifique o membro e registre o checklist com ele presente. A API confere a disponibilidade e as pendências em atraso."
       />
       {disponiveis.ok ? (
         <CheckoutForm

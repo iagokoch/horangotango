@@ -35,14 +35,14 @@ export function Breadcrumbs() {
 
   return (
     <nav aria-label="Trilha de navegação" className="min-w-0">
-      <ol className="flex min-w-0 items-center gap-1 text-sm">
+      <ol className="flex min-w-0 items-center gap-1.5 text-base">
         {itens.map((item, indice) => {
           const ultimo = indice === itens.length - 1;
           return (
             <li key={item.href} className="flex min-w-0 items-center gap-1">
-              {indice > 0 && <ChevronRight className="size-3.5 shrink-0 text-subtle" aria-hidden />}
+              {indice > 0 && <ChevronRight className="size-3.5 shrink-0 text-border-strong" aria-hidden />}
               {ultimo ? (
-                <span aria-current="page" className={item.id ? "truncate font-mono text-xs" : "truncate font-medium"}>
+                <span aria-current="page" className={item.id ? "truncate font-mono text-xs" : "truncate font-semibold"}>
                   {item.rotulo}
                 </span>
               ) : (

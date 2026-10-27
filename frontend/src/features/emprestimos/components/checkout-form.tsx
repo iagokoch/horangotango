@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowUpRight, CalendarClock, CheckCircle2, ClipboardList, Plus, UserRound, Wrench } from "lucide-react";
+import { Check, CheckCircle2, Plus } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
 import { toast } from "sonner";
@@ -13,18 +13,19 @@ import { Callout } from "@/components/shared/callout";
 import { CopyButton } from "@/components/shared/copy-button";
 import { ErrorPanel } from "@/components/shared/error-panel";
 import { MonoId } from "@/components/shared/mono-id";
+import { ToolTag } from "@/components/shared/tool-tag";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import type { Ferramenta } from "@/features/ferramentas/types";
 import type { ActionError } from "@/lib/api/errors";
-import { formatarDataHora } from "@/lib/format";
+import { formatarDataCurta, formatarDataHora } from "@/lib/format";
 import { ROTAS, rotaEmprestimo } from "@/lib/rotas";
+import { cn } from "@/lib/utils";
 
 import { acaoRegistrarRetirada } from "../actions";
 import { acompanhar } from "../acompanhamento";
-import { CHECKLIST_VAZIO, retiradaFormSchema, type ValoresRetirada } from "../schemas";
+import { CHECKLIST_VAZIO, checklistFormSchema, retiradaFormSchema, type ValoresRetirada } from "../schemas";
 import { ehBloqueioPorAtraso } from "../situacao";
 import type { Emprestimo } from "../types";
 import { BlockedPanel } from "./blocked-panel";
@@ -62,8 +63,11 @@ export function CheckoutForm({ ferramentas, ferramentaInicialId, diasPrazo, staf
 
   const ferramentaId = useWatch({ control: form.control, name: "ferramentaId" });
   const membroId = useWatch({ control: form.control, name: "membroId" });
+  const checklist = useWatch({ control: form.control, name: "checklist" });
   const selecionada = ferramentas.find((ferramenta) => ferramenta.id === ferramentaId);
   const semPrazo = diasPrazo === null;
+  // Progresso das etapas só para orientação visual; a validação de verdade é a do schema.
+  const etapasOk = [Boolean(selecionada), Boolean(membroId?.trim()), checklistFormSchema.safeParse(checklist).success];
 
   async function confirmar(dados: DadosRetiradaForm) {
     setErro(null);
@@ -114,8 +118,8 @@ export function CheckoutForm({ ferramentas, ferramentaInicialId, diasPrazo, staf
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(confirmar)} noValidate className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="space-y-5">
+      <form onSubmit={form.handleSubmit(confirmar)} noValidate className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] xl:gap-12">
+        <div className="min-w-0 space-y-6">
           {semPrazo && (
             <Callout
               tone="danger"
@@ -151,148 +155,181 @@ export function CheckoutForm({ ferramentas, ferramentaInicialId, diasPrazo, staf
               />
             ))}
 
-          <Etapa numero="01" titulo="Ferramenta" icone={<Wrench />} descricao="Somente ferramentas disponíveis no momento da consulta.">
-            <FormField
-              control={form.control}
-              name="ferramentaId"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel className="sr-only" id="rotulo-ferramenta">
-                    Ferramenta a retirar
-                  </FormLabel>
-                  <ToolPicker
-                    ferramentas={ferramentas}
-                    valor={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    invalido={!!fieldState.error}
-                    idRotulo="rotulo-ferramenta"
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </Etapa>
+          <ol className="space-y-0">
+            <Etapa numero={1} concluida={etapasOk[0]} titulo="Ferramenta" descricao="Somente ferramentas disponíveis no momento da consulta.">
+              <FormField
+                control={form.control}
+                name="ferramentaId"
+                render={({ field, fieldState }) => (
+                  <FormItem>
+                    <FormLabel className="sr-only" id="rotulo-ferramenta">
+                      Ferramenta a retirar
+                    </FormLabel>
+                    <ToolPicker
+                      ferramentas={ferramentas}
+                      valor={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      invalido={!!fieldState.error}
+                      idRotulo="rotulo-ferramenta"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </Etapa>
 
-          <Etapa numero="02" titulo="Membro" icone={<UserRound />} descricao="Quem leva a ferramenta e responde pela devolução.">
-            <FormField
-              control={form.control}
-              name="membroId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ID do membro</FormLabel>
-                  <FormControl>
-                    <Input {...field} autoComplete="off" spellCheck={false} className="font-mono" placeholder="00000000-0000-0000-0000-000000000000" />
-                  </FormControl>
-                  <FormDescription>
-                    O membro encontra o próprio ID em <strong className="font-medium text-foreground">Meu perfil</strong>. A
-                    API confere se o membro existe e se há atraso pendente.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </Etapa>
+            <Etapa numero={2} concluida={etapasOk[1]} titulo="Membro" descricao="Quem leva a ferramenta e responde pela devolução.">
+              <FormField
+                control={form.control}
+                name="membroId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ID do membro</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        autoComplete="off"
+                        spellCheck={false}
+                        className="font-mono text-sm"
+                        placeholder="00000000-0000-0000-0000-000000000000"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      O membro encontra o próprio ID em <strong className="font-semibold text-foreground">Meu perfil</strong>. A
+                      API confere se o membro existe e se há atraso pendente.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </Etapa>
 
-          <Etapa
-            numero="03"
-            titulo="Checklist de conservação"
-            icone={<ClipboardList />}
-            descricao="Confira a ferramenta com o membro. O registro é imutável depois de confirmado."
-          >
-            <ChecklistFields control={form.control} prefixo="checklist" legenda="Checklist de retirada" />
-          </Etapa>
+            <Etapa
+              numero={3}
+              concluida={etapasOk[2]}
+              titulo="Checklist de conservação"
+              descricao="Confira a ferramenta com o membro. O registro é imutável depois de confirmado."
+              ultima
+            >
+              <ChecklistFields control={form.control} prefixo="checklist" legenda="Checklist de retirada" />
+            </Etapa>
+          </ol>
         </div>
 
-        <aside className="lg:sticky lg:top-20 lg:self-start">
-          <Panel>
-            <PanelHeader title="Resumo da retirada" icon={<ArrowUpRight />} />
-            <PanelBody className="space-y-4 text-sm">
-              <Resumo rotulo="Ferramenta">
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+          <div className="rounded-xl border bg-surface-sunken">
+            <div className="border-b border-dashed px-5 py-4">
+              <h2 className="text-lg font-semibold">Ficha de retirada</h2>
+              <p className="text-sm text-muted-foreground">Confira antes de confirmar.</p>
+            </div>
+            <dl className="space-y-4 px-5 py-4">
+              <Resumo rotulo="Ferramenta" ok={etapasOk[0]}>
                 {selecionada ? (
-                  <>
-                    <span className="block font-mono text-xs">{selecionada.codigo}</span>
-                    <span className="block font-medium">{selecionada.nome}</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">Não selecionada</span>
-                )}
-              </Resumo>
-              <Resumo rotulo="Membro">
-                {membroId?.trim() ? <MonoId id={membroId.trim()} /> : <span className="text-muted-foreground">Não informado</span>}
-              </Resumo>
-              <Resumo rotulo="Prazo vigente">
-                {diasPrazo ? (
-                  <span className="flex items-center gap-1.5">
-                    <CalendarClock className="size-4 text-muted-foreground" aria-hidden />
-                    {diasPrazo} {diasPrazo === 1 ? "dia corrido" : "dias corridos"}
+                  <span className="flex min-w-0 flex-col items-start gap-1.5">
+                    <ToolTag codigo={selecionada.codigo} />
+                    <span className="font-semibold leading-snug">{selecionada.nome}</span>
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-subtle">Não selecionada</span>
                 )}
               </Resumo>
-              {previsao && (
-                <Resumo rotulo="Devolução prevista">
-                  <span suppressHydrationWarning>{formatarDataHora(previsao)}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">Calculada pela API na confirmação.</span>
-                </Resumo>
+              <Resumo rotulo="Membro" ok={etapasOk[1]}>
+                {membroId?.trim() ? <MonoId id={membroId.trim()} /> : <span className="text-subtle">Não informado</span>}
+              </Resumo>
+              <Resumo rotulo="Checklist" ok={etapasOk[2]}>
+                {etapasOk[2] ? "Completo" : <span className="text-subtle">Pendente</span>}
+              </Resumo>
+            </dl>
+            <div className="border-t border-dashed px-5 py-5">
+              {previsao ? (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="stamp shrink-0 text-foreground" suppressHydrationWarning>
+                    <span className="text-xs font-semibold">Devolver até</span>
+                    <span className="whitespace-nowrap font-display text-2xl font-bold">{formatarDataCurta(previsao)}</span>
+                  </span>
+                  <p className="text-right text-sm text-muted-foreground">
+                    <span className="tabular block font-semibold text-foreground">
+                      {diasPrazo} {diasPrazo === 1 ? "dia corrido" : "dias corridos"}
+                    </span>
+                    data final calculada pela API
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {semPrazo ? "Sem prazo padrão, a retirada não pode ser confirmada." : "O prazo será calculado pela API."}
+                </p>
               )}
-              <Button type="submit" size="lg" className="w-full" loading={enviando} disabled={semPrazo}>
+              <Button type="submit" size="lg" className="mt-5 w-full" loading={enviando} disabled={semPrazo}>
                 {!enviando && <CheckCircle2 aria-hidden />}
                 {enviando ? "Confirmando…" : "Confirmar retirada"}
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Ao confirmar, a ferramenta passa a constar como emprestada e o prazo é gravado no empréstimo.
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Ao confirmar, a ferramenta passa a constar como emprestada e o prazo fica gravado no empréstimo.
               </p>
-            </PanelBody>
-          </Panel>
+            </div>
+          </div>
         </aside>
       </form>
     </Form>
   );
 }
 
+// Etapa do roteiro de retirada. As etapas são de fato uma sequência, por isso numeradas, ligadas
+// por um trilho; o número vira um visto quando a etapa está preenchida.
 function Etapa({
   numero,
   titulo,
   descricao,
-  icone,
+  concluida,
+  ultima = false,
   children,
 }: {
-  numero: string;
+  numero: number;
   titulo: string;
   descricao: string;
-  icone: React.ReactNode;
+  concluida: boolean;
+  ultima?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <Panel>
-      <div className="flex items-start gap-3 border-b px-4 py-3">
-        <span className="font-mono text-xs font-semibold text-brand-ink">{numero}</span>
-        <div className="min-w-0 flex-1">
-          <h2 className="flex items-center gap-2 text-base font-semibold [&_svg]:size-4 [&_svg]:text-muted-foreground">
-            {icone}
-            {titulo}
-          </h2>
-          <p className="text-sm text-muted-foreground">{descricao}</p>
-        </div>
-      </div>
-      <PanelBody>{children}</PanelBody>
-    </Panel>
+    <li className={cn("relative pl-12 sm:pl-14", !ultima && "pb-10")}>
+      {!ultima && <span aria-hidden className="absolute bottom-0 left-[15px] top-10 w-0.5 rounded-full bg-border" />}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute left-0 top-0 flex size-8 items-center justify-center rounded-full border-2 text-base font-bold transition-colors duration-200",
+          concluida ? "border-foreground bg-foreground text-background" : "border-border-strong bg-surface text-muted-foreground",
+        )}
+      >
+        {concluida ? <Check className="size-4" strokeWidth={3} /> : numero}
+      </span>
+      <h2 className="text-xl font-semibold leading-8">
+        <span className="sr-only">Etapa {numero}: </span>
+        {titulo}
+        {concluida && <span className="sr-only"> (preenchida)</span>}
+      </h2>
+      <p className="mb-4 text-base text-muted-foreground">{descricao}</p>
+      {children}
+    </li>
   );
 }
 
-function Resumo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+function Resumo({ rotulo, ok, children }: { rotulo: string; ok: boolean; children: React.ReactNode }) {
   return (
-    <div>
-      <p className="eyebrow mb-1">{rotulo}</p>
-      <div>{children}</div>
+    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
+      <dt className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <span aria-hidden className={cn("size-1.5 rounded-full", ok ? "bg-status-available" : "bg-border-strong")} />
+        {rotulo}
+      </dt>
+      <dd className="min-w-0 text-base">{children}</dd>
     </div>
   );
 }
 
 // Comprovante exibido após a confirmação. O código do empréstimo é o que o membro usa para
-// consultar o prazo depois (a API não lista os empréstimos de um membro na N2).
+// consultar o prazo depois (a API não lista os empréstimos de um membro na N2). O carimbo de
+// devolução entra com um movimento curto: é a resposta à confirmação.
 function Comprovante({
   emprestimo,
   ferramenta,
@@ -303,49 +340,71 @@ function Comprovante({
   onNovaRetirada: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-2xl animate-fade-up">
-      <Panel className="overflow-hidden">
-        <div className="flex items-center gap-3 border-b bg-status-available/[0.07] px-5 py-4">
-          <span className="flex size-10 items-center justify-center rounded-full bg-status-available text-background">
-            <CheckCircle2 className="size-5" aria-hidden />
-          </span>
-          <div role="status">
-            <h2 className="text-lg font-semibold">Retirada confirmada</h2>
-            <p className="text-sm text-muted-foreground">Entregue o código do empréstimo ao membro.</p>
+    <div className="mx-auto max-w-2xl">
+      <div role="status" className="mb-6 flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-full bg-status-available text-white">
+          <CheckCircle2 className="size-5" aria-hidden />
+        </span>
+        <div>
+          <h2 className="font-display text-2xl font-bold">Retirada confirmada</h2>
+          <p className="text-base text-muted-foreground">Entregue o código do empréstimo ao membro.</p>
+        </div>
+      </div>
+
+      <article className="rounded-xl border bg-surface shadow-raised">
+        <div className="grid gap-6 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-6">
+          <div className="min-w-0 space-y-5">
+            <div>
+              <p className="text-sm text-muted-foreground">Código do empréstimo</p>
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="min-w-0 break-all font-mono text-base font-semibold">{emprestimo.id}</span>
+                <CopyButton valor={emprestimo.id} rotulo="Copiar código" compacto />
+              </div>
+            </div>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <dt className="text-sm text-muted-foreground">Ferramenta</dt>
+                <dd className="mt-1 flex flex-wrap items-center gap-2 text-base">
+                  {ferramenta ? (
+                    <>
+                      <ToolTag codigo={ferramenta.codigo} />
+                      <span className="font-semibold">{ferramenta.nome}</span>
+                    </>
+                  ) : (
+                    <MonoId id={emprestimo.ferramentaId} />
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Membro</dt>
+                <dd className="mt-1">
+                  <MonoId id={emprestimo.membroId} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Retirada</dt>
+                <dd className="mt-1 text-base">{formatarDataHora(emprestimo.dataHoraRetirada)}</dd>
+              </div>
+            </dl>
+          </div>
+          <div className="flex items-start sm:justify-end">
+            <span className="stamp animate-stamp-in text-status-loan">
+              <span className="text-xs font-semibold">Devolver até</span>
+              <span className="font-display text-3xl font-bold">{formatarDataCurta(emprestimo.prazoDevolucao)}</span>
+              <span className="text-xs">{formatarDataHora(emprestimo.prazoDevolucao)}</span>
+            </span>
           </div>
         </div>
-        <PanelBody className="space-y-5 p-5">
-          <div className="rounded-lg border border-dashed p-4">
-            <p className="eyebrow">Código do empréstimo</p>
-            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-              <span className="break-all font-mono text-base font-semibold">{emprestimo.id}</span>
-              <CopyButton valor={emprestimo.id} rotulo="Copiar código" />
-            </div>
-          </div>
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="eyebrow">Ferramenta</dt>
-              <dd className="mt-1">
-                {ferramenta ? `${ferramenta.codigo} · ${ferramenta.nome}` : <MonoId id={emprestimo.ferramentaId} />}
-              </dd>
-            </div>
-            <div>
-              <dt className="eyebrow">Membro</dt>
-              <dd className="mt-1">
-                <MonoId id={emprestimo.membroId} />
-              </dd>
-            </div>
-            <div>
-              <dt className="eyebrow">Retirada</dt>
-              <dd className="mt-1">{formatarDataHora(emprestimo.dataHoraRetirada)}</dd>
-            </div>
-            <div>
-              <dt className="eyebrow">Devolver até</dt>
-              <dd className="mt-1 font-semibold">{formatarDataHora(emprestimo.prazoDevolucao)}</dd>
-            </div>
-          </dl>
+
+        <div aria-hidden className="relative">
+          <div className="absolute -left-2 top-1/2 size-4 -translate-y-1/2 rounded-full border bg-surface [clip-path:inset(0_0_0_50%)]" />
+          <div className="mx-4 border-t-2 border-dashed" />
+          <div className="absolute -right-2 top-1/2 size-4 -translate-y-1/2 rounded-full border bg-surface [clip-path:inset(0_50%_0_0)]" />
+        </div>
+
+        <div className="space-y-5 p-5 sm:p-6">
           {emprestimo.checklistRetirada && <ChecklistView titulo="Checklist da retirada" checklist={emprestimo.checklistRetirada} />}
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="secondary" onClick={onNovaRetirada}>
               <Plus aria-hidden />
               Nova retirada
@@ -354,8 +413,8 @@ function Comprovante({
               <Link href={rotaEmprestimo(emprestimo.id)}>Abrir empréstimo</Link>
             </Button>
           </div>
-        </PanelBody>
-      </Panel>
+        </div>
+      </article>
     </div>
   );
 }

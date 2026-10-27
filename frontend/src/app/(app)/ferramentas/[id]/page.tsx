@@ -4,10 +4,13 @@ import { notFound } from "next/navigation";
 import { ArrowUpRight, Pencil } from "lucide-react";
 
 import { Callout } from "@/components/shared/callout";
+import { CopyButton } from "@/components/shared/copy-button";
+import { DataList, DataRow } from "@/components/shared/data-list";
 import { ErrorPanel } from "@/components/shared/error-panel";
 import { MonoId } from "@/components/shared/mono-id";
 import { PageHeader } from "@/components/shared/page-header";
 import { RetryButton } from "@/components/shared/retry-button";
+import { ToolTag } from "@/components/shared/tool-tag";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { buscarFerramenta } from "@/features/ferramentas/api";
@@ -38,12 +41,17 @@ export default async function FerramentaPage({ params }: { params: { id: string 
   return (
     <>
       <PageHeader
-        eyebrow={<span className="font-mono">{ferramenta.codigo}</span>}
+        eyebrow={
+          <>
+            <ToolTag codigo={ferramenta.codigo} grande />
+            <span>{ferramenta.categoria}</span>
+          </>
+        }
         title={ferramenta.nome}
         meta={
           <>
             <StatusBadge status={ferramenta.status} />
-            <span className="text-sm text-muted-foreground">{ferramenta.categoria}</span>
+            <span className="text-base text-muted-foreground">{meta.descricao}</span>
           </>
         }
         actions={
@@ -68,29 +76,8 @@ export default async function FerramentaPage({ params }: { params: { id: string 
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
-          <Panel>
-            <PanelHeader title="Ficha técnica" />
-            <PanelBody>
-              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                <Campo rotulo="Código">
-                  <span className="font-mono">{ferramenta.codigo}</span>
-                </Campo>
-                <Campo rotulo="Categoria">{ferramenta.categoria}</Campo>
-                <Campo rotulo="Valor estimado">
-                  <span className="font-mono tabular">{formatarMoeda(ferramenta.valorEstimado)}</span>
-                </Campo>
-                <Campo rotulo="Situação">{meta.descricao}</Campo>
-                <div className="sm:col-span-2">
-                  <Campo rotulo="Estado de conservação">
-                    <span className="whitespace-pre-line">{ferramenta.estadoConservacao}</span>
-                  </Campo>
-                </div>
-              </dl>
-            </PanelBody>
-          </Panel>
-
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)] lg:gap-8">
+        <div className="min-w-0 space-y-6">
           {ferramenta.status === "ON_LOAN" && (
             <Callout tone="info" title="Ferramenta emprestada">
               A API ainda não informa qual empréstimo está com a ferramenta (a consulta por ferramenta e por membro é
@@ -103,36 +90,55 @@ export default async function FerramentaPage({ params }: { params: { id: string 
           )}
 
           <Panel>
+            <PanelHeader title="Ficha técnica" />
+            <PanelBody>
+              <DataList>
+                <DataRow rotulo="Código">
+                  <ToolTag codigo={ferramenta.codigo} />
+                </DataRow>
+                <DataRow rotulo="Nome">{ferramenta.nome}</DataRow>
+                <DataRow rotulo="Categoria">{ferramenta.categoria}</DataRow>
+                <DataRow rotulo="Valor estimado">
+                  <span className="tabular font-semibold">{formatarMoeda(ferramenta.valorEstimado)}</span>
+                  <span className="mt-0.5 block text-sm text-muted-foreground">Referência em caso de dano ou perda.</span>
+                </DataRow>
+                <DataRow rotulo="Estado de conservação">
+                  <p className="whitespace-pre-line leading-relaxed">{ferramenta.estadoConservacao}</p>
+                </DataRow>
+              </DataList>
+            </PanelBody>
+          </Panel>
+
+          <Panel>
             <PanelHeader title="Registro" description="Auditoria gravada pela API a cada alteração." />
             <PanelBody>
-              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                <Campo rotulo="Cadastrada em">{formatarDataHora(ferramenta.dataHoraCriacao)}</Campo>
-                <Campo rotulo="Cadastrada por">
+              <ol className="relative space-y-5 border-l-2 border-dashed border-border pl-6">
+                <Marco titulo="Cadastrada" quando={ferramenta.dataHoraCriacao}>
                   <MonoId id={ferramenta.idUsuarioCriacao} voce={ferramenta.idUsuarioCriacao === usuario.id} />
-                </Campo>
-                <Campo rotulo="Última alteração">{formatarDataHora(ferramenta.dataHoraAlteracao)}</Campo>
-                <Campo rotulo="Alterada por">
+                </Marco>
+                <Marco titulo="Última alteração" quando={ferramenta.dataHoraAlteracao} atual>
                   <MonoId id={ferramenta.idUsuarioAlteracao} voce={ferramenta.idUsuarioAlteracao === usuario.id} />
-                </Campo>
-                <Campo rotulo="Versão do registro">
-                  <span className="font-mono">{ferramenta.versao}</span>
-                </Campo>
-                <Campo rotulo="Identificador">
-                  <span className="break-all font-mono text-xs">{ferramenta.id}</span>
-                </Campo>
-              </dl>
+                </Marco>
+              </ol>
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-md bg-surface-sunken p-3 pl-4">
+                <div className="min-w-0 text-sm text-muted-foreground">
+                  Versão <span className="tabular font-semibold text-foreground">{ferramenta.versao}</span>
+                  <span className="mt-0.5 block break-all font-mono text-xs text-foreground">{ferramenta.id}</span>
+                </div>
+                <CopyButton valor={ferramenta.id} rotulo="Copiar identificador" compacto />
+              </div>
             </PanelBody>
           </Panel>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-6">
           <Panel>
-            <PanelHeader title="Ciclo de vida" description="Retirada e devolução mudam o status automaticamente." />
-            <PanelBody className="space-y-4">
+            <PanelHeader title="Ciclo de vida" description="Retirada e devolução mudam o status sozinhas." />
+            <PanelBody className="space-y-5">
               <LifecycleTrack atual={ferramenta.status} />
               {staff && (
-                <div className="border-t pt-4">
-                  <p className="mb-2 text-sm font-medium">Ações do Staff</p>
+                <div className="border-t pt-5">
+                  <p className="mb-3 text-base font-semibold">Ações do Staff</p>
                   <LifecycleActions ferramenta={ferramenta} />
                 </div>
               )}
@@ -144,11 +150,33 @@ export default async function FerramentaPage({ params }: { params: { id: string 
   );
 }
 
-function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+function Marco({
+  titulo,
+  quando,
+  atual = false,
+  children,
+}: {
+  titulo: string;
+  quando: string | null | undefined;
+  atual?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="min-w-0">
-      <dt className="eyebrow">{rotulo}</dt>
-      <dd className="mt-1 text-base">{children}</dd>
-    </div>
+    <li className="relative">
+      <span
+        aria-hidden
+        className={
+          atual
+            ? "absolute -left-8 top-1 size-3.5 rounded-full border-2 border-surface bg-foreground ring-2 ring-foreground"
+            : "absolute -left-8 top-1 size-3.5 rounded-full border-2 border-border-strong bg-surface"
+        }
+      />
+      <p className="text-base font-semibold">{titulo}</p>
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+        <time dateTime={quando ?? undefined}>{formatarDataHora(quando)}</time>
+        <span aria-hidden>·</span>
+        <span className="inline-flex items-center gap-1">por {children}</span>
+      </p>
+    </li>
   );
 }

@@ -47,16 +47,15 @@ export function RegisterForm() {
   }
 
   return (
-    <div className="animate-fade-up">
-      <p className="eyebrow">Novo membro</p>
-      <h1 className="mt-2 text-3xl font-semibold">Criar conta</h1>
-      <p className="mt-2 text-base text-muted-foreground">
+    <div>
+      <h1 className="font-display text-4xl font-bold">Criar conta</h1>
+      <p className="mt-3 text-lg leading-relaxed text-muted-foreground">
         O cadastro cria uma conta de <strong className="font-medium text-foreground">Membro</strong>. Contas de
         Staff são criadas pela equipe da oficina.
       </p>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(cadastrar)} noValidate className="mt-6 space-y-4">
+        <form onSubmit={form.handleSubmit(cadastrar)} noValidate className="mt-8 space-y-5">
           <AccountFields control={form.control} />
           <FormField
             control={form.control}
@@ -89,9 +88,12 @@ export function RegisterForm() {
         </form>
       </Form>
 
-      <p className="mt-6 text-sm text-muted-foreground">
+      <p className="mt-8 border-t pt-6 text-base text-muted-foreground">
         Já tem conta?{" "}
-        <Link href={ROTAS.login} className="font-medium text-brand-ink underline-offset-4 hover:underline">
+        <Link
+          href={ROTAS.login}
+          className="font-semibold text-foreground underline decoration-brand decoration-2 underline-offset-4 transition-colors hover:decoration-foreground"
+        >
           Entrar
         </Link>
       </p>

@@ -38,7 +38,7 @@ export function ChecklistFields<T extends FieldValues>({ control, prefixo, legen
         render={({ field, fieldState }) => (
           <FormItem>
             {/* Grupo de rádio: o rótulo nomeia o grupo via aria-labelledby, não um único controle. */}
-            <span id={`${prefixo}-estado-rotulo`} className="block text-sm font-medium leading-none">
+            <span id={`${prefixo}-estado-rotulo`} className="block text-sm font-semibold leading-none">
               Estado funcional
             </span>
             <div
@@ -58,7 +58,7 @@ export function ChecklistFields<T extends FieldValues>({ control, prefixo, legen
                     onClick={() => field.onChange(valor)}
                     onBlur={field.onBlur}
                     className={cn(
-                      "flex items-start gap-3 rounded-lg border bg-surface p-3 text-left transition-[border-color,background-color,box-shadow] hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "flex items-start gap-3 rounded-lg border border-input bg-surface p-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150 hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       selecionado &&
                         (valor === "INTACT"
                           ? "border-status-available bg-status-available/[0.06] ring-1 ring-status-available"
@@ -76,14 +76,14 @@ export function ChecklistFields<T extends FieldValues>({ control, prefixo, legen
                       {selecionado && <span className="size-2 rounded-full bg-foreground" />}
                     </span>
                     <span className="min-w-0">
-                      <span className="flex items-center gap-1.5 text-sm font-semibold">
+                      <span className="flex items-center gap-1.5 text-base font-semibold">
                         <Icone
                           className={cn("size-4", valor === "INTACT" ? "text-status-available" : "text-status-repair")}
                           aria-hidden
                         />
                         {ROTULO_ESTADO_FUNCIONAL[valor]}
                       </span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">{descricao}</span>
+                      <span className="mt-0.5 block text-sm text-muted-foreground">{descricao}</span>
                     </span>
                   </button>
                 );
@@ -105,8 +105,8 @@ export function ChecklistFields<T extends FieldValues>({ control, prefixo, legen
                 type="button"
                 onClick={() => field.onChange(SEM_AVARIAS)}
                 className={cn(
-                  "rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  field.value === SEM_AVARIAS ? "border-foreground bg-foreground text-background" : "text-muted-foreground",
+                  "inline-flex h-7 items-center rounded-full border px-3 text-sm font-medium transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  field.value === SEM_AVARIAS ? "border-brand bg-brand text-brand-foreground hover:border-brand" : "text-muted-foreground",
                 )}
               >
                 {SEM_AVARIAS}
@@ -187,18 +187,18 @@ function AcessoriosInput({ itens, onChange, onBlur }: AcessoriosInputProps) {
           aria-pressed={nenhum}
           onClick={() => onChange(nenhum ? [] : [NENHUM_ACESSORIO])}
           className={cn(
-            "rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            nenhum ? "border-foreground bg-foreground text-background" : "text-muted-foreground",
+            "inline-flex h-7 items-center rounded-full border px-3 text-sm font-medium transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            nenhum ? "border-brand bg-brand text-brand-foreground hover:border-brand" : "text-muted-foreground",
           )}
         >
           {NENHUM_ACESSORIO}
         </button>
       </div>
-      <div className="rounded-md border border-input bg-surface p-1.5 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/20">
+      <div className="rounded-md border border-input bg-surface p-1.5 transition-[border-color,box-shadow] hover:border-border-strong focus-within:border-foreground/70 focus-within:shadow-focus">
         {itens.length > 0 && (
           <ul className="flex flex-wrap gap-1.5 p-0.5 pb-1.5" aria-label="Acessórios adicionados">
             {itens.map((item) => (
-              <li key={item} className="flex items-center gap-1 rounded-md border bg-surface-sunken py-0.5 pl-2 pr-0.5 text-sm">
+              <li key={item} className="flex items-center gap-1 rounded-sm border bg-surface-sunken py-0.5 pl-2 pr-0.5 text-base animate-in fade-in-0 zoom-in-95">
                 {item}
                 <button
                   type="button"
@@ -225,7 +225,7 @@ function AcessoriosInput({ itens, onChange, onBlur }: AcessoriosInputProps) {
               placeholder={nenhum ? "Nenhum acessório registrado" : "Ex.: maleta, 2 baterias, carregador"}
               disabled={nenhum}
               maxLength={LIMITES_CHECKLIST.acessorio}
-              className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-0"
+              className="h-8 border-0 bg-transparent shadow-none hover:border-0 focus-visible:shadow-none"
             />
           </FormControl>
           <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { ChevronsUpDown, CircleUserRound, LogOut, Monitor, Moon, Sun } from "lucide-react";
@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Segmented } from "@/components/ui/segmented";
 import { acaoSair } from "@/features/auth/actions";
 import { ROTULO_PAPEL, type Usuario } from "@/lib/auth/types";
 import { ROTAS } from "@/lib/rotas";
@@ -29,7 +30,7 @@ export function Avatar({ nome, className }: { nome: string; className?: string }
     <span
       aria-hidden
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-md border bg-surface-sunken font-mono text-xs font-semibold text-foreground",
+        "font-condensed flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-bold tracking-wide text-background",
         className,
       )}
     >
@@ -38,12 +39,14 @@ export function Avatar({ nome, className }: { nome: string; className?: string }
   );
 }
 
-export function PapelBadge({ papel }: { papel: Usuario["papel"] }) {
+// Staff leva o amarelo da marca: é quem opera o balcão. Membro fica neutro.
+export function PapelBadge({ papel, className }: { papel: Usuario["papel"]; className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded px-1.5 py-px font-mono text-[0.625rem] font-semibold uppercase tracking-[0.12em]",
-        papel === "STAFF" ? "bg-brand-soft text-brand-ink" : "bg-surface-sunken text-muted-foreground ring-1 ring-inset ring-border",
+        "inline-flex h-5 items-center rounded-sm px-1.5 text-xs font-semibold",
+        papel === "STAFF" ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+        className,
       )}
     >
       {ROTULO_PAPEL[papel]}
@@ -51,35 +54,41 @@ export function PapelBadge({ papel }: { papel: Usuario["papel"] }) {
   );
 }
 
+type Tema = "light" | "dark" | "system";
+
 const TEMAS = [
-  { valor: "light", rotulo: "Claro", icone: Sun },
-  { valor: "dark", rotulo: "Escuro", icone: Moon },
-  { valor: "system", rotulo: "Sistema", icone: Monitor },
-] as const;
+  { valor: "light" as Tema, rotulo: "Claro", icone: <Sun aria-hidden /> },
+  { valor: "dark" as Tema, rotulo: "Escuro", icone: <Moon aria-hidden /> },
+  { valor: "system" as Tema, rotulo: "Sistema", icone: <Monitor aria-hidden /> },
+];
 
 export function UserMenu({ usuario }: { usuario: Usuario }) {
   const { theme, setTheme } = useTheme();
   const [saindo, setSaindo] = useState(false);
+  // O tema só é conhecido no cliente; antes disso nenhuma opção aparece marcada.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent"
+        className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-foreground/[0.05]"
         aria-label={`Conta de ${usuario.nome}`}
       >
         <Avatar nome={usuario.nome} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{usuario.nome}</span>
-          <span className="mt-0.5 block">
-            <PapelBadge papel={usuario.papel} />
-          </span>
+          <span className="block truncate text-base font-semibold leading-5">{usuario.nome}</span>
+          <span className="block truncate text-sm text-muted-foreground">{ROTULO_PAPEL[usuario.papel]}</span>
         </span>
         <ChevronsUpDown className="size-4 shrink-0 text-subtle" aria-hidden />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[14rem]">
-        <DropdownMenuLabel>
-          <span className="block truncate font-medium">{usuario.nome}</span>
-          <span className="block truncate text-xs font-normal text-muted-foreground">{usuario.email}</span>
+      <DropdownMenuContent align="start" side="top" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[15rem]">
+        <DropdownMenuLabel className="flex items-start justify-between gap-2">
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">{usuario.nome}</span>
+            <span className="block truncate text-sm font-normal text-muted-foreground">{usuario.email}</span>
+          </span>
+          <PapelBadge papel={usuario.papel} className="mt-0.5" />
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
@@ -89,23 +98,15 @@ export function UserMenu({ usuario }: { usuario: Usuario }) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <p className="eyebrow px-2 pb-1 pt-1.5">Tema</p>
-        <div className="grid grid-cols-3 gap-1 px-1 pb-1" role="group" aria-label="Tema da interface">
-          {TEMAS.map(({ valor, rotulo, icone: Icone }) => (
-            <button
-              key={valor}
-              type="button"
-              onClick={() => setTheme(valor)}
-              aria-pressed={theme === valor}
-              className={cn(
-                "flex flex-col items-center gap-1 rounded-md border border-transparent py-1.5 text-2xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                theme === valor && "border-border bg-surface-sunken text-foreground",
-              )}
-            >
-              <Icone className="size-4" aria-hidden />
-              {rotulo}
-            </button>
-          ))}
+        <div className="px-1 pb-1 pt-1.5">
+          <p className="mb-1.5 px-1.5 text-sm text-muted-foreground">Tema</p>
+          <Segmented
+            rotulo="Tema da interface"
+            opcoes={TEMAS}
+            valor={montado ? ((theme as Tema | undefined) ?? "system") : ("" as Tema)}
+            onChange={setTheme}
+            className="flex w-full"
+          />
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem

@@ -1,15 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  CalendarClock,
-  CircleCheck,
-  PackagePlus,
-  Search,
-  ShieldOff,
-  Warehouse,
-} from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CalendarClock, PackagePlus, Search, Warehouse } from "lucide-react";
 
 import { Callout } from "@/components/shared/callout";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -17,6 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorPanel } from "@/components/shared/error-panel";
 import { PageHeader } from "@/components/shared/page-header";
 import { RetryButton } from "@/components/shared/retry-button";
+import { SectionHeading } from "@/components/shared/section-heading";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { buscarPrazo, type PrazoDevolucao } from "@/features/configuracoes/api";
@@ -26,12 +18,12 @@ import { listarFerramentas } from "@/features/ferramentas/api";
 import { contarPorStatus, resumirPorCategoria } from "@/features/ferramentas/status";
 import type { Ferramenta } from "@/features/ferramentas/types";
 import { CategoryBars } from "@/features/painel/components/category-bars";
-import { KpiTile } from "@/features/painel/components/kpi-tile";
+import { InventoryStrip } from "@/features/painel/components/inventory-strip";
 import { ShadowBoard } from "@/features/painel/components/shadow-board";
 import { carregar, type Carregamento } from "@/lib/api/server";
 import { exigirUsuario } from "@/lib/auth/session";
 import type { Usuario } from "@/lib/auth/types";
-import { formatarDataLonga, formatarMoedaCompacta, plural } from "@/lib/format";
+import { formatarDataLonga, formatarMoedaCompacta } from "@/lib/format";
 import { ROTAS } from "@/lib/rotas";
 
 export const metadata: Metadata = { title: "Painel" };
@@ -55,13 +47,14 @@ export default async function PainelPage() {
     staff ? carregar(() => buscarPrazo()) : Promise.resolve(null),
   ]);
   const primeiroNome = usuario.nome.split(/\s+/)[0];
+  const data = formatarDataLonga(new Date());
 
   return (
     <>
       <PageHeader
-        eyebrow={formatarDataLonga(new Date())}
+        eyebrow={<span className="first-letter:uppercase">{data}</span>}
         title={`${saudacao()}, ${primeiroNome}`}
-        description={staff ? "Situação do acervo e do balcão agora." : "Veja o que está disponível e acompanhe seus prazos."}
+        description={staff ? "Situação do acervo e do balcão neste momento." : "Veja o que está disponível e acompanhe os seus prazos."}
         actions={staff ? <AcoesStaff /> : <AcoesMembro />}
       />
 
@@ -113,7 +106,7 @@ function AlertaPrazo({ prazo }: { prazo: Carregamento<PrazoDevolucao> }) {
       <Callout
         tone="danger"
         title="Retiradas bloqueadas: prazo padrão não configurado"
-        className="mb-5"
+        className="mb-6"
         action={
           <Button asChild size="sm" variant="secondary">
             <Link href={ROTAS.configuracoes}>
@@ -128,7 +121,7 @@ function AlertaPrazo({ prazo }: { prazo: Carregamento<PrazoDevolucao> }) {
     );
   }
   return (
-    <Callout tone="warning" title="Não foi possível consultar o prazo padrão" className="mb-5">
+    <Callout tone="warning" title="Não foi possível consultar o prazo padrão" className="mb-6">
       O restante do painel continua atualizado.
     </Callout>
   );
@@ -137,8 +130,6 @@ function AlertaPrazo({ prazo }: { prazo: Carregamento<PrazoDevolucao> }) {
 function Conteudo({ ferramentas, usuario, prazo }: { ferramentas: Ferramenta[]; usuario: Usuario; prazo: PrazoDevolucao | null }) {
   const staff = usuario.papel === "STAFF";
   const contagem = contarPorStatus(ferramentas);
-  const emCirculacao = ferramentas.length - contagem.INACTIVE;
-  const fora = contagem.UNDER_REPAIR + contagem.LOST + contagem.INACTIVE;
   const patrimonio = ferramentas
     .filter((ferramenta) => ferramenta.status !== "INACTIVE")
     .reduce((soma, ferramenta) => soma + ferramenta.valorEstimado, 0);
@@ -146,103 +137,65 @@ function Conteudo({ ferramentas, usuario, prazo }: { ferramentas: Ferramenta[]; 
 
   if (ferramentas.length === 0) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-6">
         {!staff && <CartaoBalcao usuario={usuario} />}
         <EmptyState
-        icon={<Warehouse />}
-        title="O acervo ainda está vazio"
-        description={
-          staff ? "Cadastre ferramentas para começar a operar o balcão." : "A equipe da oficina ainda não cadastrou ferramentas."
-        }
-        action={
-          staff && (
-            <Button asChild>
-              <Link href={ROTAS.novaFerramenta}>
-                <PackagePlus aria-hidden />
-                Cadastrar ferramenta
-              </Link>
-            </Button>
-          )
-        }
+          className="rounded-xl border"
+          icon={<Warehouse />}
+          title="O acervo ainda está vazio"
+          description={
+            staff ? "Cadastre as ferramentas da oficina para começar a operar o balcão." : "A equipe da oficina ainda não cadastrou ferramentas."
+          }
+          action={
+            staff && (
+              <Button asChild>
+                <Link href={ROTAS.novaFerramenta}>
+                  <PackagePlus aria-hidden />
+                  Cadastrar ferramenta
+                </Link>
+              </Button>
+            )
+          }
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-      {!staff && <CartaoBalcao usuario={usuario} />}
+    <div className="space-y-8">
+      <InventoryStrip contagem={contagem} total={ferramentas.length} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiTile
-          rotulo="Disponíveis"
-          icone={<CircleCheck />}
-          valor={contagem.AVAILABLE}
-          fracao={emCirculacao ? contagem.AVAILABLE / emCirculacao : 0}
-          corFracao="bg-status-available"
-          detalhe={`de ${plural(emCirculacao, "ferramenta em circulação", "ferramentas em circulação")}`}
-        />
-        <KpiTile
-          rotulo="Emprestadas"
-          icone={<ArrowUpRight />}
-          valor={contagem.ON_LOAN}
-          fracao={emCirculacao ? contagem.ON_LOAN / emCirculacao : 0}
-          corFracao="bg-status-loan"
-          detalhe={staff ? "Cada uma corresponde a um empréstimo ativo." : "Fora da oficina neste momento."}
-        />
-        <KpiTile
-          rotulo="Fora de circulação"
-          icone={<ShieldOff />}
-          valor={fora}
-          detalhe={`${contagem.UNDER_REPAIR} em reparo · ${contagem.LOST} perdidas · ${contagem.INACTIVE} inativas`}
-        />
-        {staff ? (
-          <KpiTile
-            rotulo="Prazo padrão"
-            icone={<CalendarClock />}
-            valor={prazo ? `${prazo.dias}d` : "—"}
-            destaque={prazo ? undefined : "danger"}
-            detalhe={
-              <>
-                Patrimônio em circulação: <span className="font-mono">{formatarMoedaCompacta(patrimonio)}</span>
-              </>
-            }
-          />
-        ) : (
-          <KpiTile rotulo="Acervo" icone={<Warehouse />} valor={ferramentas.length} detalhe={plural(categorias.length, "categoria", "categorias")} />
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-        <Panel className="self-start">
-          <PanelHeader
-            title="Quadro de sombras"
-            description="Cada vaga é uma ferramenta do acervo. Vaga tracejada: fora da oficina."
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,1fr)]">
+        <section aria-labelledby="titulo-quadro" className="min-w-0">
+          <SectionHeading
+            id="titulo-quadro"
+            title="Quadro de ferramentas"
+            description="Cada vaga é uma ferramenta. Vaga tracejada: está fora da oficina."
             actions={
               <Button asChild variant="ghost" size="sm">
-                <Link href={ROTAS.ferramentas}>Ver catálogo</Link>
+                <Link href={ROTAS.ferramentas}>Abrir catálogo</Link>
               </Button>
             }
           />
-          <PanelBody>
-            <ShadowBoard ferramentas={ferramentas} />
-          </PanelBody>
-        </Panel>
+          <ShadowBoard ferramentas={ferramentas} />
+        </section>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
+          {staff ? <ResumoBalcao prazo={prazo} patrimonio={patrimonio} /> : <CartaoBalcao usuario={usuario} />}
+
           <Panel>
             <PanelHeader
               title={staff ? "Próximos vencimentos" : "Meus prazos"}
               description="Empréstimos acompanhados neste dispositivo."
               actions={
                 <Button asChild variant="ghost" size="sm">
-                  <Link href={ROTAS.emprestimos}>Todos</Link>
+                  <Link href={ROTAS.emprestimos}>Ver todos</Link>
                 </Button>
               }
             />
-            <PanelBody className="space-y-4">
+            <PanelBody className="space-y-5">
               <TrackedLoans usuarioId={usuario.id} papel={usuario.papel} compacto limite={5} />
-              <div className="border-t pt-4">
+              <div className="border-t pt-5">
                 <LoanLookup />
               </div>
             </PanelBody>
@@ -260,17 +213,49 @@ function Conteudo({ ferramentas, usuario, prazo }: { ferramentas: Ferramenta[]; 
   );
 }
 
+// Números do balcão que não são contagem de status: o prazo aplicado a cada retirada e o valor do
+// que está em circulação (referência em caso de dano ou perda).
+function ResumoBalcao({ prazo, patrimonio }: { prazo: PrazoDevolucao | null; patrimonio: number }) {
+  return (
+    <div className="grid grid-cols-2 divide-x rounded-lg border">
+      <Link
+        href={ROTAS.configuracoes}
+        className="group rounded-l-lg p-4 transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        <span className="flex items-center gap-1.5 text-sm text-muted-foreground group-hover:text-foreground">
+          <CalendarClock className="size-4" aria-hidden />
+          Prazo padrão
+        </span>
+        <span className="mt-1.5 block font-display text-3xl font-bold tabular">
+          {prazo ? (
+            <>
+              {prazo.dias}
+              <span className="ml-1 font-sans text-base font-normal text-muted-foreground">{prazo.dias === 1 ? "dia" : "dias"}</span>
+            </>
+          ) : (
+            <span className="text-status-overdue">—</span>
+          )}
+        </span>
+      </Link>
+      <div className="p-4">
+        <span className="text-sm text-muted-foreground">Patrimônio em circulação</span>
+        <span className="mt-1.5 block font-display text-3xl font-bold tabular">{formatarMoedaCompacta(patrimonio)}</span>
+      </div>
+    </div>
+  );
+}
+
 // O Staff registra a retirada pelo ID do membro (a API não oferece busca de membros), então o
 // painel do membro deixa esse ID sempre à mão.
 function CartaoBalcao({ usuario }: { usuario: Usuario }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border-strong bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="eyebrow">Seu ID para o balcão</p>
-        <p className="mt-1 break-all font-mono text-base font-semibold">{usuario.id}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">Informe ao Staff ao retirar uma ferramenta.</p>
+    <div className="rounded-lg border-2 border-dashed border-border-strong p-4">
+      <p className="text-sm font-semibold">Seu ID para o balcão</p>
+      <p className="mt-1 text-sm text-muted-foreground">Informe ao Staff ao retirar uma ferramenta.</p>
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-surface-sunken p-2 pl-3">
+        <span className="min-w-0 break-all font-mono text-sm font-medium">{usuario.id}</span>
+        <CopyButton valor={usuario.id} rotulo="Copiar ID" compacto />
       </div>
-      <CopyButton valor={usuario.id} rotulo="Copiar ID" />
     </div>
   );
 }

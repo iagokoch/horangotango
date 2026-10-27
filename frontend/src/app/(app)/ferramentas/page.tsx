@@ -28,7 +28,6 @@ export default async function FerramentasPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Acervo da oficina"
         title="Ferramentas"
         description={
           contagem && resultado.ok

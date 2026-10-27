@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Acesso negado" };
 export default function AcessoNegadoPage() {
   return (
     <EmptyState
-      className="mt-10"
+      className="mt-6 rounded-xl border"
       icon={<ShieldX />}
       title="Área exclusiva do Staff"
       description="Seu perfil de membro não tem acesso a esta operação. Se precisar, procure o responsável pela oficina."

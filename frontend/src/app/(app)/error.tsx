@@ -14,7 +14,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
   }, [error]);
 
   return (
-    <div className="mx-auto mt-10 max-w-xl">
+    <div className="mx-auto mt-6 max-w-xl">
       <Callout
         tone="danger"
         title="Algo não saiu como esperado"

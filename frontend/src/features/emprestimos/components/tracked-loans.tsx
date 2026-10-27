@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDownLeft, ArrowRight, Inbox, RotateCw, X } from "lucide-react";
+import { ArrowDownLeft, ChevronRight, Inbox, RotateCw, X } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorPanel } from "@/components/shared/error-panel";
 import { MonoId } from "@/components/shared/mono-id";
+import { ToolTag } from "@/components/shared/tool-tag";
 import { Button } from "@/components/ui/button";
+import { FilterTabs } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Papel } from "@/lib/auth/types";
@@ -86,7 +88,7 @@ export function TrackedLoans({ usuarioId, papel, compacto = false, limite }: Tra
     return (
       <div className="space-y-2" role="status" aria-label="Carregando empréstimos">
         {Array.from({ length: compacto ? 3 : 4 }, (_, indice) => (
-          <Skeleton key={indice} className="h-14" />
+          <Skeleton key={indice} className={compacto ? "h-16" : "h-[4.5rem]"} />
         ))}
       </div>
     );
@@ -111,54 +113,47 @@ export function TrackedLoans({ usuarioId, papel, compacto = false, limite }: Tra
     return (
       <EmptyState
         icon={<Inbox />}
-        title="Nenhum empréstimo acompanhado neste dispositivo"
+        title={compacto ? "Nada acompanhado ainda" : "Nenhum empréstimo acompanhado neste dispositivo"}
         description={
           staff
             ? "As retiradas registradas aqui e os empréstimos abertos pelo código aparecem nesta lista."
             : "Abra um empréstimo com o código do comprovante entregue no balcão. Ele passa a aparecer aqui."
         }
-        className={compacto ? "py-8" : undefined}
+        className={compacto ? "px-2 py-6" : "rounded-xl border"}
       />
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {!compacto && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar empréstimos">
-            {FILTROS.map(({ valor, rotulo }) => (
-              <button
-                key={valor}
-                type="button"
-                aria-pressed={filtro === valor}
-                onClick={() => setFiltro(valor)}
-                className={cn(
-                  "flex h-8 items-center gap-2 rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  filtro === valor
-                    ? "border-foreground bg-foreground text-background"
-                    : "bg-surface text-muted-foreground hover:border-border-strong hover:text-foreground",
-                  valor === "ATRASADOS" && contagem.ATRASADOS > 0 && filtro !== valor && "border-status-overdue/40 text-status-overdue",
-                )}
-              >
-                {rotulo}
-                <span className={cn("font-mono text-xs", filtro === valor ? "text-background/70" : "text-subtle")}>{contagem[valor]}</span>
-              </button>
-            ))}
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => void atualizar()} loading={carregando}>
+        <div className="flex items-end gap-3">
+          <FilterTabs<Filtro>
+            className="min-w-0 flex-1"
+            rotulo="Filtrar empréstimos"
+            valor={filtro}
+            onChange={setFiltro}
+            opcoes={FILTROS.map(({ valor, rotulo }) => ({
+              valor,
+              rotulo,
+              quantidade: contagem[valor],
+              alerta: valor === "ATRASADOS" && contagem.ATRASADOS > 0,
+            }))}
+          />
+          <Button variant="ghost" size="sm" onClick={() => void atualizar()} loading={carregando} className="mb-1.5 shrink-0">
             {!carregando && <RotateCw aria-hidden />}
-            Atualizar
+            <span className="hidden sm:inline">Atualizar</span>
+            <span className="sr-only sm:hidden">Atualizar</span>
           </Button>
         </div>
       )}
 
       {visiveis.length === 0 ? (
-        <p className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed px-4 py-8 text-center text-base text-muted-foreground">
           {compacto ? "Nenhum empréstimo em aberto entre os acompanhados." : "Nenhum empréstimo neste filtro."}
         </p>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-lg border bg-surface shadow-raised">
+        <ul className={cn("divide-y overflow-hidden", compacto ? "-mx-5 border-y" : "rounded-lg border")}>
           {visiveis.map(({ item, situacao }) => (
             <LinhaEmprestimo
               key={item.id}
@@ -206,7 +201,7 @@ function LinhaEmprestimo({
 
   if (!item.emprestimo) {
     return (
-      <li className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+      <li className="flex items-center justify-between gap-3 px-5 py-3 text-base">
         <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
           <MonoId id={item.id} />
           {item.erro === 404 ? "não encontrado na API" : item.erro === 403 ? "sem permissão para consultar" : "indisponível no momento"}
@@ -218,46 +213,28 @@ function LinhaEmprestimo({
 
   const emprestimo = item.emprestimo;
   const aberto = emprestimo.status === "ACTIVE";
-  const acoes = (
-    <div className="flex items-center justify-end gap-1">
-      {staff && aberto && (
-        <Button asChild variant="secondary" size="sm">
-          <Link href={rotaDevolucao(emprestimo.id)}>
-            <ArrowDownLeft aria-hidden />
-            Devolver
-          </Link>
-        </Button>
-      )}
-      <Button asChild variant="ghost" size="icon-sm">
-        <Link href={rotaEmprestimo(emprestimo.id)} aria-label="Abrir empréstimo">
-          <ArrowRight aria-hidden />
-        </Link>
-      </Button>
-      {!compacto && remover}
-    </div>
-  );
 
   return (
     <li
       className={cn(
-        "relative grid gap-3 px-4 py-3 transition-colors hover:bg-surface-sunken/60",
-        // Na versão compacta (coluna estreita do painel), a régua de prazo vai para baixo do título.
-        compacto
-          ? "grid-cols-[minmax(0,1fr)_auto] items-start"
-          : "sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-center",
-        situacao === "ATRASADO" && "bg-status-overdue/[0.04]",
+        "group relative grid gap-x-5 gap-y-3 px-5 py-4 transition-colors hover:bg-surface-sunken",
+        compacto ? "grid-cols-[minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] sm:items-center",
+        situacao === "ATRASADO" && "bg-status-overdue/[0.035]",
       )}
     >
       {situacao === "ATRASADO" && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-status-overdue" />}
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={rotaEmprestimo(emprestimo.id)} className="truncate font-medium hover:text-brand-ink">
+          {item.ferramenta && <ToolTag codigo={item.ferramenta.codigo} />}
+          <Link
+            href={rotaEmprestimo(emprestimo.id)}
+            className="min-w-0 truncate text-base font-semibold after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring"
+          >
             {item.ferramenta ? item.ferramenta.nome : "Ferramenta"}
           </Link>
-          <SituacaoBadge emprestimo={emprestimo} />
         </div>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-          {item.ferramenta && <span className="font-mono">{item.ferramenta.codigo}</span>}
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <SituacaoBadge emprestimo={emprestimo} />
           <span>retirada {formatarDataCurta(emprestimo.dataHoraRetirada)}</span>
           {staff && (
             <span className="inline-flex items-center gap-1">
@@ -266,13 +243,23 @@ function LinhaEmprestimo({
           )}
         </p>
       </div>
-      {compacto && acoes}
       {(!compacto || aberto) && (
-        <div className={compacto ? "col-span-2" : undefined}>
+        <div className={compacto ? "col-span-2 row-start-2" : undefined}>
           <DeadlineBar emprestimo={emprestimo} compacto />
         </div>
       )}
-      {!compacto && acoes}
+      <div className={cn("relative z-10 flex items-center justify-end gap-1", compacto && "col-start-2 row-start-1 self-start")}>
+        {staff && aberto && (
+          <Button asChild variant="secondary" size="sm">
+            <Link href={rotaDevolucao(emprestimo.id)}>
+              <ArrowDownLeft aria-hidden />
+              Devolver
+            </Link>
+          </Button>
+        )}
+        {!compacto && remover}
+        {!(staff && aberto) && compacto && <ChevronRight className="size-4 text-subtle" aria-hidden />}
+      </div>
     </li>
   );
 }

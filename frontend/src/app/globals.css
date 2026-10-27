@@ -3,109 +3,114 @@
 @tailwind utilities;
 
 /*
- * Design system Monitoolring — "Grafite + Laranja de Sinalização".
+ * Design system Monitoolring — "Etiqueta & Bancada".
  *
- * Neutros levemente quentes (concreto e grafite de oficina) e uma única cor de marca: o laranja
- * de segurança usado em máquinas e bancadas. O laranja marca ação e foco; os estados da
- * ferramenta usam uma paleta semântica própria, sempre com ícone e rótulo.
+ * A área de trabalho é uma chapa de aço frio (canvas) e o conteúdo fica numa folha clara encaixada
+ * nela, como a ficha sobre a bancada. O texto é grafite. Há uma única cor de marca, o amarelo de
+ * etiqueta, com um papel só: indicar o que está selecionado, ativo ou em foco. Os estados da
+ * ferramenta usam uma paleta semântica própria, sempre com ícone e rótulo; o normal fica discreto
+ * e as exceções ganham cor.
  *
- * Contraste (WCAG 2.1 AA): texto principal > 14:1, muted > 4.6:1 nos dois temas; botão primário
- * (laranja com texto grafite) 5.7:1.
+ * Contraste (WCAG 2.1 AA): texto principal > 15:1 e muted > 5.5:1 nos dois temas; texto de marca
+ * (brand-ink) 5.4:1 sobre branco; botão primário grafite 16:1.
  */
 @layer base {
   :root {
-    --background: 40 8% 97%;
-    --foreground: 228 9% 10%;
+    --canvas: 90 6% 92.5%;
+    --background: 90 6% 92.5%;
+    --foreground: 204 16% 10%;
 
     --surface: 0 0% 100%;
     --surface-raised: 0 0% 100%;
-    --surface-sunken: 40 7% 94.5%;
+    --surface-sunken: 90 8% 96.5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 228 9% 10%;
+    --popover-foreground: 204 16% 10%;
 
-    --primary: 19 92% 53%;
-    --primary-hover: 19 92% 48%;
-    --primary-foreground: 228 12% 8%;
+    --primary: 204 16% 12%;
+    --primary-hover: 204 12% 24%;
+    --primary-foreground: 0 0% 100%;
 
-    --brand: 19 92% 53%;
-    --brand-ink: 17 86% 38%;
-    --brand-soft: 22 100% 95%;
+    --brand: 45 90% 56%;
+    --brand-foreground: 204 16% 10%;
+    --brand-ink: 42 100% 26%;
+    --brand-soft: 48 92% 91%;
 
-    --secondary: 40 6% 93%;
-    --secondary-foreground: 228 9% 12%;
+    --secondary: 90 6% 94%;
+    --secondary-foreground: 204 16% 10%;
 
-    --muted: 40 6% 93%;
-    --muted-foreground: 228 5% 38%;
-    --subtle: 228 4% 56%;
+    --muted: 90 6% 93%;
+    --muted-foreground: 200 7% 36%;
+    --subtle: 200 5% 54%;
 
-    --accent: 40 6% 93%;
-    --accent-foreground: 228 9% 10%;
+    --accent: 90 7% 94.5%;
+    --accent-foreground: 204 16% 10%;
 
-    --destructive: 0 72% 42%;
+    --destructive: 2 70% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 6% 88%;
-    --border-strong: 40 4% 78%;
-    --input: 40 5% 84%;
-    --ring: 19 92% 53%;
-    --shadow: 228 20% 10%;
+    --border: 90 6% 86.5%;
+    --border-strong: 90 5% 74%;
+    --input: 90 5% 80%;
+    --ring: 42 100% 30%;
+    --shadow: 204 30% 8%;
 
-    --status-available: 152 64% 31%;
-    --status-loan: 216 78% 46%;
-    --status-repair: 34 92% 32%;
-    --status-lost: 344 72% 44%;
-    --status-inactive: 228 5% 43%;
-    --status-overdue: 0 74% 44%;
+    --status-available: 152 60% 29%;
+    --status-loan: 214 78% 45%;
+    --status-repair: 27 88% 39%;
+    --status-lost: 322 60% 43%;
+    --status-inactive: 200 7% 45%;
+    --status-overdue: 2 74% 46%;
 
-    --radius: 0.5rem;
-    --sidebar-width: 15.5rem;
+    --sidebar-width: 15rem;
   }
 
   .dark {
-    --background: 228 10% 6%;
-    --foreground: 220 9% 93%;
+    --canvas: 204 12% 6%;
+    --background: 204 12% 6%;
+    --foreground: 90 8% 92%;
 
-    --surface: 228 9% 9%;
-    --surface-raised: 228 8% 11.5%;
-    --surface-sunken: 228 10% 4.5%;
+    --surface: 204 10% 9.5%;
+    --surface-raised: 204 9% 12%;
+    --surface-sunken: 204 11% 7.5%;
 
-    --popover: 228 8% 11%;
-    --popover-foreground: 220 9% 93%;
+    --popover: 204 9% 12%;
+    --popover-foreground: 90 8% 92%;
 
-    --primary: 21 96% 58%;
-    --primary-hover: 21 96% 64%;
-    --primary-foreground: 228 14% 6%;
+    --primary: 90 8% 92%;
+    --primary-hover: 90 6% 80%;
+    --primary-foreground: 204 16% 8%;
 
-    --brand: 21 96% 58%;
-    --brand-ink: 24 100% 66%;
-    --brand-soft: 20 60% 12%;
+    --brand: 45 92% 60%;
+    --brand-foreground: 204 16% 8%;
+    --brand-ink: 45 95% 66%;
+    --brand-soft: 44 40% 13%;
 
-    --secondary: 228 7% 14%;
-    --secondary-foreground: 220 9% 93%;
+    --secondary: 204 8% 14%;
+    --secondary-foreground: 90 8% 92%;
 
-    --muted: 228 7% 14%;
-    --muted-foreground: 225 5% 64%;
-    --subtle: 225 4% 46%;
+    --muted: 204 8% 14%;
+    --muted-foreground: 200 6% 65%;
+    --subtle: 200 5% 47%;
 
-    --accent: 228 7% 15%;
-    --accent-foreground: 220 9% 95%;
+    --accent: 204 8% 15%;
+    --accent-foreground: 90 8% 94%;
 
-    --destructive: 0 78% 60%;
-    --destructive-foreground: 228 14% 6%;
+    --destructive: 2 80% 62%;
+    --destructive-foreground: 204 16% 8%;
 
-    --border: 228 7% 16%;
-    --border-strong: 228 6% 24%;
-    --input: 228 6% 20%;
-    --ring: 21 96% 58%;
+    --border: 204 8% 17%;
+    --border-strong: 204 7% 26%;
+    --input: 204 7% 22%;
+    --ring: 45 92% 60%;
     --shadow: 0 0% 0%;
 
-    --status-available: 150 52% 52%;
-    --status-loan: 214 92% 68%;
-    --status-repair: 40 94% 58%;
-    --status-lost: 346 86% 68%;
-    --status-inactive: 225 5% 58%;
-    --status-overdue: 0 88% 66%;
+    --status-available: 150 50% 52%;
+    --status-loan: 212 90% 68%;
+    --status-repair: 30 92% 60%;
+    --status-lost: 322 75% 70%;
+    --status-inactive: 200 6% 60%;
+    --status-overdue: 2 88% 66%;
   }
 }
 
@@ -117,11 +122,12 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-background text-base text-foreground antialiased;
-    font-feature-settings: "ss01", "cv11";
+    @apply bg-canvas text-base text-foreground antialiased;
+    font-feature-settings: "ss01", "ss02";
   }
   ::selection {
-    background: hsl(var(--brand) / 0.28);
+    background: hsl(var(--brand) / 0.45);
+    color: hsl(var(--foreground));
   }
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
@@ -139,39 +145,80 @@
 }
 
 @layer components {
-  /* Régua milimetrada: o motivo visual da marca (precisão de bancada). */
-  .scale-rule {
-    height: 6px;
-    background-image:
-      repeating-linear-gradient(to right, hsl(var(--border-strong)) 0 1px, transparent 1px 40px),
-      repeating-linear-gradient(to right, hsl(var(--border)) 0 1px, transparent 1px 8px);
-    background-size: 100% 6px, 100% 3px;
-    background-repeat: no-repeat;
-    background-position: left bottom, left bottom;
+  /* Larguras do Archivo: expandida para títulos (placa de máquina), condensada para códigos. */
+  .font-display {
+    font-variation-settings: "wdth" 116;
+    letter-spacing: -0.02em;
+  }
+  .font-condensed {
+    font-variation-settings: "wdth" 80;
+  }
+  /* Martian Mono estreitada: UUIDs ocupam menos linha sem perder a distinção dos caracteres. */
+  .font-mono {
+    font-variation-settings: "wdth" 82;
+    letter-spacing: -0.01em;
   }
 
-  /* Painel perfurado (pegboard) do fundo das telas de autenticação. */
-  .pegboard {
-    background-color: hsl(var(--surface-sunken));
-    background-image: radial-gradient(hsl(var(--border-strong)) 1.2px, transparent 1.4px);
-    background-size: 18px 18px;
-    background-position: -9px -9px;
+  /*
+   * Etiqueta de ferramenta: o código impresso numa etiqueta de papel com o furo do cordão.
+   * É o único jeito de exibir um código de ferramenta no produto.
+   */
+  .tool-tag {
+    @apply relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-tag border border-border-strong bg-surface py-0.5 pl-1.5 pr-2 text-xs font-semibold uppercase leading-4 text-foreground;
+    font-variation-settings: "wdth" 80;
+    letter-spacing: 0.04em;
+  }
+  .tool-tag::before {
+    content: "";
+    @apply size-[5px] shrink-0 rounded-full border border-border-strong bg-canvas;
+  }
+  .tool-tag-lg {
+    @apply gap-2 rounded-sm px-2.5 py-1 text-base;
+  }
+  .tool-tag-lg::before {
+    @apply size-2;
   }
 
-  /* Hachura diagonal: vaga fora de circulação no quadro de sombras. */
+  /* Carimbo de data de devolução, como o da ficha de empréstimo de biblioteca. */
+  .stamp {
+    @apply inline-flex -rotate-[4deg] flex-col items-start rounded-md border-2 border-current px-3 py-1.5 leading-tight;
+    font-variation-settings: "wdth" 84;
+  }
+
+  /*
+   * Painel grafite das telas públicas. Fica escuro nos dois temas (é a "parede" onde as etiquetas
+   * ficam penduradas), com tokens próprios para não depender da inversão do tema.
+   */
+  .ink-panel {
+    --ink-bg: 204 16% 10%;
+    --ink-fg: 90 8% 92%;
+    --ink-muted: 200 6% 66%;
+    --ink-line: 204 10% 20%;
+    background-color: hsl(var(--ink-bg));
+    color: hsl(var(--ink-fg));
+  }
+  .dark .ink-panel {
+    --ink-bg: 204 11% 9%;
+    --ink-line: 204 9% 17%;
+  }
+
+  /* Hachura diagonal: vaga fora de circulação no quadro. */
   .hatch {
     background-image: repeating-linear-gradient(
       135deg,
-      hsl(var(--status-inactive) / 0.28) 0 1px,
+      hsl(var(--status-inactive) / 0.25) 0 1px,
       transparent 1px 5px
     );
   }
 
-  .eyebrow {
-    @apply font-mono text-2xs font-medium uppercase tracking-[0.12em] text-muted-foreground;
-  }
-
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

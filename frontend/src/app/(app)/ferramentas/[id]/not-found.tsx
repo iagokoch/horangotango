@@ -8,7 +8,7 @@ import { ROTAS } from "@/lib/rotas";
 export default function FerramentaNaoEncontrada() {
   return (
     <EmptyState
-      className="mt-8"
+      className="mt-6 rounded-xl border"
       icon={<SearchX />}
       title="Ferramenta não encontrada"
       description="O identificador não corresponde a nenhuma ferramenta do acervo."

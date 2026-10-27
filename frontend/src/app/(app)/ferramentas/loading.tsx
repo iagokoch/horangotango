@@ -4,10 +4,9 @@ import { CatalogSkeleton } from "@/features/ferramentas/components/catalog-skele
 export default function Loading() {
   return (
     <>
-      <div className="mb-6 space-y-2">
-        <Skeleton className="h-3 w-28" />
-        <Skeleton className="h-8 w-56" />
-        <Skeleton className="h-4 w-80 max-w-full" />
+      <div className="mb-8 space-y-3">
+        <Skeleton className="h-10 w-60" />
+        <Skeleton className="h-5 w-96 max-w-full" />
       </div>
       <CatalogSkeleton />
     </>

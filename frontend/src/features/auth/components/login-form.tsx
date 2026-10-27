@@ -60,21 +60,20 @@ export function LoginForm({ destino, motivo, emailInicial }: LoginFormProps) {
   }
 
   return (
-    <div className="animate-fade-up">
-      <p className="eyebrow">Acesso</p>
-      <h1 className="mt-2 text-3xl font-semibold">Entrar no Monitoolring</h1>
-      <p className="mt-2 text-base text-muted-foreground">
+    <div>
+      <h1 className="font-display text-4xl font-bold">Entrar</h1>
+      <p className="mt-3 text-lg leading-relaxed text-muted-foreground">
         Membros consultam o acervo e os próprios empréstimos. O Staff opera o balcão.
       </p>
 
       {aviso && !erro && (
-        <Callout tone={aviso.tom} title={aviso.titulo} className="mt-6" role="status">
+        <Callout tone={aviso.tom} title={aviso.titulo} className="mt-8" role="status">
           {aviso.texto}
         </Callout>
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(entrar)} noValidate className="mt-6 space-y-4">
+        <form onSubmit={form.handleSubmit(entrar)} noValidate className="mt-8 space-y-5">
           <FormField
             control={form.control}
             name="email"
@@ -82,7 +81,7 @@ export function LoginForm({ destino, motivo, emailInicial }: LoginFormProps) {
               <FormItem>
                 <FormLabel>E-mail</FormLabel>
                 <FormControl>
-                  <Input {...field} type="email" autoComplete="email" inputMode="email" autoFocus={!emailInicial} />
+                  <Input {...field} type="email" autoComplete="email" inputMode="email" autoFocus={!emailInicial} className="h-11" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -101,13 +100,13 @@ export function LoginForm({ destino, motivo, emailInicial }: LoginFormProps) {
                       type={senhaVisivel ? "text" : "password"}
                       autoComplete="current-password"
                       autoFocus={!!emailInicial}
-                      className="pr-10"
+                      className="h-11 pr-11"
                     />
                   </FormControl>
                   <button
                     type="button"
                     onClick={() => setSenhaVisivel((visivel) => !visivel)}
-                    className="absolute right-1 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={senhaVisivel ? "Ocultar senha" : "Mostrar senha"}
                     aria-pressed={senhaVisivel}
                   >
@@ -141,9 +140,12 @@ export function LoginForm({ destino, motivo, emailInicial }: LoginFormProps) {
         </form>
       </Form>
 
-      <p className="mt-6 text-sm text-muted-foreground">
+      <p className="mt-8 border-t pt-6 text-base text-muted-foreground">
         Ainda não tem conta?{" "}
-        <Link href={ROTAS.cadastro} className="font-medium text-brand-ink underline-offset-4 hover:underline">
+        <Link
+          href={ROTAS.cadastro}
+          className="font-semibold text-foreground underline decoration-brand decoration-2 underline-offset-4 transition-colors hover:decoration-foreground"
+        >
           Cadastre-se como membro
         </Link>
       </p>

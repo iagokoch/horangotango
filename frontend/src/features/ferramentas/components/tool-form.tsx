@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RotateCw, Save } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch, type Control } from "react-hook-form";
 import { toast } from "sonner";
 
 import { ErrorPanel } from "@/components/shared/error-panel";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input, Textarea } from "@/components/ui/input";
-import { Panel, PanelBody, PanelFooter } from "@/components/ui/panel";
+import { ToolTag } from "@/components/shared/tool-tag";
+import { cn } from "@/lib/utils";
 import type { ActionError } from "@/lib/api/errors";
 import { errosDeCampo } from "@/lib/api/mensagens";
 import { ROTAS, rotaFerramenta } from "@/lib/rotas";
@@ -93,9 +94,13 @@ export function ToolForm({ ferramenta, categoriasExistentes }: ToolFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(salvar)} noValidate>
-        <Panel>
-          <PanelBody className="space-y-5 p-5">
-            <Secao titulo="Identificação" descricao="O código é a etiqueta física da ferramenta e não pode se repetir no acervo.">
+        <div>
+          <div className="divide-y border-t">
+            <Secao
+              titulo="Identificação"
+              descricao="O código é a etiqueta física da ferramenta e não pode se repetir no acervo."
+              extra={<PreviaEtiqueta control={form.control} />}
+            >
               <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
                 <FormField
                   control={form.control}
@@ -203,7 +208,7 @@ export function ToolForm({ ferramenta, categoriasExistentes }: ToolFormProps) {
             </Secao>
 
             {erro && (
-              <div>
+              <div className="py-6">
                 <ErrorPanel
                   erro={erro}
                   titulo="Não foi possível salvar a ferramenta"
@@ -227,8 +232,12 @@ export function ToolForm({ ferramenta, categoriasExistentes }: ToolFormProps) {
                 />
               </div>
             )}
-          </PanelBody>
-          <PanelFooter>
+          </div>
+          {/* Barra de ações presa ao pé da tela: salvar fica ao alcance mesmo em formulários longos. */}
+          <div className="sticky bottom-0 z-10 -mx-4 mt-2 flex flex-col-reverse gap-2 border-t bg-surface/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:flex-row sm:items-center sm:justify-end sm:px-6 lg:mx-0 lg:px-0">
+            <p className="mr-auto hidden text-sm text-muted-foreground sm:block">
+              {edicao ? "Só os campos alterados são enviados." : "A ferramenta entra no acervo como disponível."}
+            </p>
             <Button asChild variant="ghost">
               <Link href={ferramenta ? rotaFerramenta(ferramenta.id) : ROTAS.ferramentas}>Cancelar</Link>
             </Button>
@@ -236,21 +245,53 @@ export function ToolForm({ ferramenta, categoriasExistentes }: ToolFormProps) {
               {!salvando && <Save aria-hidden />}
               {salvando ? "Salvando…" : edicao ? "Salvar alterações" : "Cadastrar ferramenta"}
             </Button>
-          </PanelFooter>
-        </Panel>
+          </div>
+        </div>
       </form>
     </Form>
   );
 }
 
-function Secao({ titulo, descricao, children }: { titulo: string; descricao: string; children: React.ReactNode }) {
+// Seção do formulário: título e orientação à esquerda, campos à direita. No celular, empilha.
+function Secao({
+  titulo,
+  descricao,
+  extra,
+  children,
+}: {
+  titulo: string;
+  descricao: string;
+  extra?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="grid gap-4 border-t pt-5 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-8">
+    <section className="grid gap-5 py-8 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] md:gap-10">
       <div>
-        <h2 className="text-base font-semibold">{titulo}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{descricao}</p>
+        <h2 className="text-lg font-semibold">{titulo}</h2>
+        <p className="mt-1 text-base leading-relaxed text-muted-foreground">{descricao}</p>
+        {extra}
       </div>
-      <div>{children}</div>
+      <div className="min-w-0">{children}</div>
     </section>
+  );
+}
+
+// Prévia de como a etiqueta da ferramenta vai aparecer no catálogo e no balcão.
+function PreviaEtiqueta({
+  control,
+}: {
+  control: Control<ValoresFormularioFerramenta, unknown, DadosFormularioFerramenta>;
+}) {
+  const [codigo, nome] = useWatch({ control, name: ["codigo", "nome"] });
+  return (
+    <div className="mt-5 hidden rounded-md border border-dashed bg-surface-sunken p-3 md:block" aria-hidden>
+      <p className="mb-2 text-sm text-subtle">Prévia da etiqueta</p>
+      <div className="flex min-w-0 items-center gap-2">
+        <ToolTag codigo={codigo?.trim() || "CÓDIGO"} className={cn(!codigo?.trim() && "text-subtle")} />
+        <span className={cn("truncate text-base font-semibold", !nome?.trim() && "font-normal text-subtle")}>
+          {nome?.trim() || "Nome da ferramenta"}
+        </span>
+      </div>
+    </div>
   );
 }

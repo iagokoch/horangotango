@@ -10,21 +10,17 @@ interface EmptyStateProps {
   className?: string;
 }
 
-// Estado vazio: contorno tracejado como a vaga vazia de um quadro de ferramentas.
+// Estado vazio: o ícone fica numa vaga tracejada, como o contorno de uma ferramenta que não está
+// no quadro. O texto diz o que fazer a seguir, não só que está vazio.
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center rounded-lg border border-dashed border-border-strong px-6 py-12 text-center",
-        className,
-      )}
-    >
-      <div className="mb-3 flex size-11 items-center justify-center rounded-lg border bg-surface text-muted-foreground shadow-raised [&_svg]:size-5">
+    <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center", className)}>
+      <div className="mb-4 flex size-14 items-center justify-center rounded-lg border-2 border-dashed border-border-strong text-subtle [&_svg]:size-6">
         {icon}
       </div>
-      <p className="text-base font-semibold">{title}</p>
-      {description && <div className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</div>}
-      {action && <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div>}
+      <p className="font-display text-xl font-bold">{title}</p>
+      {description && <div className="mt-1.5 max-w-[46ch] text-base leading-relaxed text-muted-foreground">{description}</div>}
+      {action && <div className="mt-5 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
 }

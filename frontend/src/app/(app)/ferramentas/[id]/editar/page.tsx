@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ErrorPanel } from "@/components/shared/error-panel";
 import { PageHeader } from "@/components/shared/page-header";
 import { RetryButton } from "@/components/shared/retry-button";
+import { ToolTag } from "@/components/shared/tool-tag";
 import { buscarFerramenta, listarFerramentas } from "@/features/ferramentas/api";
 import { StatusBadge } from "@/features/ferramentas/components/status-badge";
 import { ToolForm } from "@/features/ferramentas/components/tool-form";
@@ -29,15 +30,22 @@ export default async function EditarFerramentaPage({ params }: { params: { id: s
     : [];
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-4xl">
       <PageHeader
-        eyebrow={`Editar · ${ferramenta.data.codigo}`}
+        eyebrow={
+          <>
+            <ToolTag codigo={ferramenta.data.codigo} />
+            <span>Editando</span>
+          </>
+        }
         title={ferramenta.data.nome}
-        description="Só os campos alterados são enviados. O status é mudado pela inativação ou reativação, na tela da ferramenta."
+        description="O status muda pela inativação ou reativação, na ficha da ferramenta."
         meta={
           <>
             <StatusBadge status={ferramenta.data.status} />
-            <span className="font-mono text-xs text-muted-foreground">versão {ferramenta.data.versao}</span>
+            <span className="text-sm text-muted-foreground">
+              Versão <span className="tabular font-semibold text-foreground">{ferramenta.data.versao}</span> do registro
+            </span>
           </>
         }
       />

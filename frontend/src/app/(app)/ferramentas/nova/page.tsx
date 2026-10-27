@@ -18,9 +18,8 @@ export default async function NovaFerramentaPage() {
     : [];
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-4xl">
       <PageHeader
-        eyebrow="Balcão · Novo item"
         title="Cadastrar ferramenta"
         description="Toda ferramenta nova entra no acervo como disponível para retirada."
       />

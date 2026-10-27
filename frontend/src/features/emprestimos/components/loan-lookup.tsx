@@ -29,13 +29,16 @@ export function LoanLookup({ autoFocus = false }: { autoFocus?: boolean }) {
   }
 
   return (
-    <form onSubmit={abrir} noValidate className="space-y-1.5">
-      <label htmlFor="codigo-emprestimo" className="text-sm font-medium">
-        Código do empréstimo
+    <form onSubmit={abrir} noValidate className="space-y-2">
+      <label htmlFor="codigo-emprestimo" className="block text-sm font-semibold">
+        Abrir pelo código do comprovante
       </label>
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <ScanLine className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" aria-hidden />
+        <div className="group relative min-w-0 flex-1">
+          <ScanLine
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle transition-colors group-focus-within:text-foreground"
+            aria-hidden
+          />
           <Input
             id="codigo-emprestimo"
             value={codigo}
@@ -43,19 +46,19 @@ export function LoanLookup({ autoFocus = false }: { autoFocus?: boolean }) {
             autoFocus={autoFocus}
             autoComplete="off"
             spellCheck={false}
-            placeholder="Cole o código do comprovante"
+            placeholder="Cole o código"
             aria-invalid={!!erro}
             aria-describedby={erro ? "codigo-emprestimo-erro" : undefined}
-            className="pl-9 font-mono"
+            className="pl-9 font-mono text-sm placeholder:font-sans placeholder:text-base"
           />
         </div>
-        <Button type="submit" variant="secondary" loading={abrindo}>
+        <Button type="submit" variant="secondary" loading={abrindo} className="h-10">
           Abrir
           {!abrindo && <ArrowRight aria-hidden />}
         </Button>
       </div>
       {erro && (
-        <p id="codigo-emprestimo-erro" role="alert" className="text-xs font-medium text-destructive">
+        <p id="codigo-emprestimo-erro" role="alert" className="text-sm font-medium text-destructive">
           {erro}
         </p>
       )}

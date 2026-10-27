@@ -8,13 +8,15 @@ import { cn } from "@/lib/utils";
 
 import { gruposDoPapel, itemAtivo } from "./navegacao";
 
+// A página ativa vira uma ficha clara "puxada" para fora da chapa, marcada pelo traço amarelo:
+// o mesmo marcador de seleção usado nos filtros.
 export function SidebarNav({ papel, onNavigate }: { papel: Papel; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Navegação principal" className="flex flex-col gap-5">
+    <nav aria-label="Navegação principal" className="flex flex-col gap-6">
       {gruposDoPapel(papel).map((grupo) => (
         <div key={grupo.titulo}>
-          <p className="eyebrow mb-1.5 px-2.5">{grupo.titulo}</p>
+          <p className="mb-1.5 px-3 text-sm font-medium text-subtle">{grupo.titulo}</p>
           <ul className="flex flex-col gap-0.5">
             {grupo.itens.map((item) => {
               const ativo = itemAtivo(item, pathname);
@@ -26,19 +28,22 @@ export function SidebarNav({ papel, onNavigate }: { papel: Papel; onNavigate?: (
                     onClick={onNavigate}
                     aria-current={ativo ? "page" : undefined}
                     className={cn(
-                      "group relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      ativo && "bg-accent text-foreground",
+                      "group relative flex h-9 items-center gap-3 rounded-md px-3 text-base font-medium text-muted-foreground transition-[background-color,color,box-shadow] duration-150 hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      ativo && "bg-surface text-foreground shadow-raised ring-1 ring-border hover:bg-surface",
                     )}
                   >
                     <span
                       aria-hidden
                       className={cn(
-                        "absolute -left-3 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-brand opacity-0 transition-opacity",
-                        ativo && "opacity-100",
+                        "absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-brand transition-transform duration-200 ease-out",
+                        ativo ? "scale-y-100" : "scale-y-0",
                       )}
                     />
                     <Icone
-                      className={cn("size-4 shrink-0 transition-colors", ativo ? "text-brand-ink" : "text-subtle group-hover:text-muted-foreground")}
+                      className={cn(
+                        "size-[18px] shrink-0 transition-colors",
+                        ativo ? "text-foreground" : "text-subtle group-hover:text-muted-foreground",
+                      )}
                       aria-hidden
                     />
                     {item.rotulo}

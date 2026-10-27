@@ -9,15 +9,16 @@ import { STATUS_FERRAMENTA, type Ferramenta, type StatusFerramenta } from "@/fea
 import { rotaFerramenta } from "@/lib/rotas";
 import { cn } from "@/lib/utils";
 
-// Quadro de sombras: nas oficinas, cada ferramenta tem seu contorno pintado no painel, e uma vaga
-// vazia mostra na hora o que está fora. Aqui cada vaga é uma ferramenta real do acervo, agrupada
-// por categoria, e o estilo da vaga indica o status (com ícone e texto no tooltip e no leitor).
+// Quadro de ferramentas: nas oficinas, cada ferramenta tem sua vaga no quadro, e uma vaga vazia
+// mostra na hora o que está fora. Aqui cada vaga é uma ferramenta real do acervo, agrupada por
+// categoria. Ferramenta no lugar é uma etiqueta sólida; fora da oficina, só resta o contorno
+// tracejado da vaga. Status também vai no tooltip e no texto para leitores de tela.
 const ESTILO_VAGA: Record<StatusFerramenta, string> = {
-  AVAILABLE: "border-border-strong bg-surface text-foreground shadow-raised",
-  ON_LOAN: "border-dashed border-status-loan/70 bg-status-loan/[0.06] text-status-loan",
-  UNDER_REPAIR: "border-status-repair/60 bg-status-repair/[0.08] text-status-repair",
-  LOST: "border-dashed border-status-lost/70 bg-transparent text-status-lost",
-  INACTIVE: "hatch border-border bg-transparent text-status-inactive",
+  AVAILABLE: "border-border-strong bg-surface text-foreground shadow-raised hover:border-foreground/50",
+  ON_LOAN: "border-dashed border-status-loan/60 bg-transparent text-status-loan hover:bg-status-loan/[0.06]",
+  UNDER_REPAIR: "border-status-repair/50 bg-status-repair/[0.07] text-status-repair hover:bg-status-repair/[0.12]",
+  LOST: "border-dashed border-status-lost/60 bg-transparent text-status-lost hover:bg-status-lost/[0.06]",
+  INACTIVE: "hatch border-border bg-transparent text-status-inactive hover:border-border-strong",
 };
 
 export function ShadowBoard({ ferramentas }: { ferramentas: Ferramenta[] }) {
@@ -30,29 +31,33 @@ export function ShadowBoard({ ferramentas }: { ferramentas: Ferramenta[] }) {
   const categorias = Array.from(grupos.keys()).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   return (
-    <div className="space-y-4">
-      <div className="pegboard space-y-4 rounded-lg border p-3 sm:p-4">
-        {categorias.map((categoria) => (
-          <div key={categoria}>
-            <p className="eyebrow mb-1.5 flex items-center gap-2">
-              <span className="truncate">{categoria}</span>
-              <span className="h-px flex-1 bg-border" aria-hidden />
-              <span className="tabular">{grupos.get(categoria)!.length}</span>
-            </p>
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(4.25rem,1fr))] gap-1.5" aria-label={`Ferramentas de ${categoria}`}>
-              {grupos.get(categoria)!.map((ferramenta) => (
-                <Vaga key={ferramenta.id} ferramenta={ferramenta} />
-              ))}
-            </ul>
-          </div>
-        ))}
+    <div className="space-y-5">
+      <div className="divide-y rounded-lg border bg-surface-sunken">
+        {categorias.map((categoria) => {
+          const itens = grupos.get(categoria)!;
+          return (
+            <div key={categoria} className="grid gap-2.5 p-4 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-5">
+              <p className="flex items-baseline justify-between gap-2 text-base font-semibold sm:block sm:pt-1.5">
+                <span className="block truncate">{categoria}</span>
+                <span className="tabular text-sm font-normal text-muted-foreground">
+                  {itens.length} {itens.length === 1 ? "vaga" : "vagas"}
+                </span>
+              </p>
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(5.25rem,1fr))] gap-2" aria-label={`Ferramentas de ${categoria}`}>
+                {itens.map((ferramenta) => (
+                  <Vaga key={ferramenta.id} ferramenta={ferramenta} />
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </div>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground" aria-label="Legenda do quadro">
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground" aria-label="Legenda do quadro">
         {STATUS_FERRAMENTA.map((status) => {
           const Icone = VISUAL_STATUS[status].icone;
           return (
-            <li key={status} className="flex items-center gap-1.5">
-              <span className={cn("flex size-4 items-center justify-center rounded border", ESTILO_VAGA[status])} aria-hidden>
+            <li key={status} className="flex items-center gap-2">
+              <span className={cn("flex h-4 w-6 items-center justify-center rounded-[3px] border", ESTILO_VAGA[status])} aria-hidden>
                 <Icone className="size-2.5" />
               </span>
               {META_STATUS[status].rotulo}
@@ -73,21 +78,22 @@ function Vaga({ ferramenta }: { ferramenta: Ferramenta }) {
           <Link
             href={rotaFerramenta(ferramenta.id)}
             className={cn(
-              "group flex h-14 flex-col items-center justify-center gap-1 rounded-md border px-1 transition-[transform,border-color] hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "group flex h-12 items-center gap-1.5 rounded-sm border px-2 transition-[transform,border-color,background-color] duration-150 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               ESTILO_VAGA[ferramenta.status],
             )}
           >
-            <Icone className="size-3.5 opacity-80" aria-hidden />
-            <span className="w-full truncate text-center font-mono text-[0.625rem] font-medium leading-none">{ferramenta.codigo}</span>
+            <Icone className="size-3.5 shrink-0 opacity-80" aria-hidden />
+            <span className="font-condensed min-w-0 truncate text-sm font-semibold uppercase tracking-wide">{ferramenta.codigo}</span>
             <span className="sr-only">
               {ferramenta.nome}, {META_STATUS[ferramenta.status].rotulo}
             </span>
           </Link>
         </TooltipTrigger>
         <TooltipContent>
-          <span className="block font-mono text-2xs opacity-70">{ferramenta.codigo}</span>
-          <span className="block font-medium">{ferramenta.nome}</span>
-          <span className="block opacity-70">{META_STATUS[ferramenta.status].rotulo}</span>
+          <span className="block font-semibold">{ferramenta.nome}</span>
+          <span className="block opacity-75">
+            {ferramenta.codigo} · {META_STATUS[ferramenta.status].rotulo}
+          </span>
         </TooltipContent>
       </Tooltip>
     </li>

@@ -50,7 +50,7 @@ export function StaffForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(cadastrar)} noValidate className="space-y-4">
+      <form onSubmit={form.handleSubmit(cadastrar)} noValidate className="space-y-5">
         {criado && (
           <Callout tone="success" title={`${criado.nome} agora é Staff`} role="status">
             <span className="flex flex-wrap items-center gap-2">
@@ -68,7 +68,7 @@ export function StaffForm() {
           />
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <ShieldCheck className="size-4" aria-hidden />
             A conta terá acesso total ao balcão e às configurações.
           </p>

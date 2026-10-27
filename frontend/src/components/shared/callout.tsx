@@ -4,23 +4,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-const calloutVariants = cva("flex gap-3 rounded-lg border px-3.5 py-3 text-sm", {
+const calloutVariants = cva("flex gap-3 rounded-lg border p-4 text-base", {
   variants: {
     tone: {
-      info: "border-border bg-surface-sunken text-foreground [&>svg]:text-muted-foreground",
-      warning: "border-status-repair/30 bg-status-repair/[0.07] [&>svg]:text-status-repair",
-      danger: "border-status-overdue/35 bg-status-overdue/[0.07] [&>svg]:text-status-overdue",
-      success: "border-status-available/30 bg-status-available/[0.07] [&>svg]:text-status-available",
+      info: "border-border bg-surface-sunken",
+      warning: "border-status-repair/30 bg-status-repair/[0.06]",
+      danger: "border-status-overdue/35 bg-status-overdue/[0.06]",
+      success: "border-status-available/30 bg-status-available/[0.06]",
     },
   },
   defaultVariants: { tone: "info" },
 });
 
 const ICONES = {
-  info: Info,
-  warning: AlertTriangle,
-  danger: OctagonAlert,
-  success: CheckCircle2,
+  info: { icone: Info, cor: "text-muted-foreground" },
+  warning: { icone: AlertTriangle, cor: "text-status-repair" },
+  danger: { icone: OctagonAlert, cor: "text-status-overdue" },
+  success: { icone: CheckCircle2, cor: "text-status-available" },
 } as const;
 
 interface CalloutProps extends VariantProps<typeof calloutVariants> {
@@ -34,14 +34,14 @@ interface CalloutProps extends VariantProps<typeof calloutVariants> {
 
 // Alerta em bloco. Ícone diferente por tom, para a mensagem não depender só da cor.
 export function Callout({ tone = "info", title, children, action, className, role }: CalloutProps) {
-  const Icone = ICONES[tone ?? "info"];
+  const { icone: Icone, cor } = ICONES[tone ?? "info"];
   return (
     <div className={cn(calloutVariants({ tone }), className)} role={role}>
-      <Icone className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <Icone className={cn("mt-0.5 size-[18px] shrink-0", cor)} aria-hidden />
       <div className="min-w-0 flex-1 space-y-1">
-        {title && <p className="font-semibold leading-5 text-foreground">{title}</p>}
-        {children && <div className="text-muted-foreground [&_strong]:text-foreground">{children}</div>}
-        {action && <div className="pt-1.5">{action}</div>}
+        {title && <p className="font-semibold leading-6 text-foreground">{title}</p>}
+        {children && <div className="leading-relaxed text-muted-foreground [&_strong]:text-foreground">{children}</div>}
+        {action && <div className="flex flex-wrap gap-2 pt-2">{action}</div>}
       </div>
     </div>
   );

@@ -67,14 +67,14 @@ export function AccountFields<T extends FieldValues & CamposConta>({ control }: 
               <button
                 type="button"
                 onClick={() => setSenhaVisivel((visivel) => !visivel)}
-                className="absolute right-1 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={senhaVisivel ? "Ocultar senha" : "Mostrar senha"}
                 aria-pressed={senhaVisivel}
               >
                 {senhaVisivel ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
-            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="Requisitos da senha">
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Requisitos da senha">
               <Requisito ok={minimoOk}>Pelo menos {SENHA_MIN} caracteres</Requisito>
               <Requisito ok={bytesOk && senha.length > 0}>Até 72 bytes</Requisito>
             </ul>

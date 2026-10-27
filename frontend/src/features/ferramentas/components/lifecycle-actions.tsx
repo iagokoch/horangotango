@@ -6,6 +6,7 @@ import { Archive, ArchiveRestore, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { ErrorPanel } from "@/components/shared/error-panel";
+import { ToolTag } from "@/components/shared/tool-tag";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -44,7 +45,7 @@ export function LifecycleActions({ ferramenta }: { ferramenta: Ferramenta }) {
 
   if (acoes.length === 0) {
     return (
-      <p className="flex items-start gap-2 text-sm text-muted-foreground">
+      <p className="flex items-start gap-2.5 rounded-md bg-surface-sunken p-3 text-sm leading-relaxed text-muted-foreground">
         <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
         Ferramenta emprestada não muda de status. Registre a devolução primeiro.
       </p>
@@ -91,7 +92,7 @@ function ConfirmarCicloVida({ ferramenta, acao }: { ferramenta: Ferramenta; acao
       }}
     >
       <AlertDialogTrigger asChild>
-        <Button variant={acao === "INATIVAR" ? "secondary" : "primary"} size="sm">
+        <Button variant={acao === "INATIVAR" ? "secondary" : "primary"} className="flex-1">
           <Icone aria-hidden />
           {texto.botao}
         </Button>
@@ -100,8 +101,9 @@ function ConfirmarCicloVida({ ferramenta, acao }: { ferramenta: Ferramenta; acao
         <AlertDialogHeader>
           <AlertDialogTitle>{texto.titulo}</AlertDialogTitle>
           <AlertDialogDescription>
-            <span className="mb-2 block font-mono text-xs text-foreground">
-              {ferramenta.codigo} · {ferramenta.nome}
+            <span className="mb-3 flex items-center gap-2 text-foreground">
+              <ToolTag codigo={ferramenta.codigo} />
+              <span className="font-semibold">{ferramenta.nome}</span>
             </span>
             {texto.descricao}
           </AlertDialogDescription>

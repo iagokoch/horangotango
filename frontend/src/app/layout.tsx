@@ -1,21 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { Archivo, Martian_Mono } from "next/font/google";
 
 import { Providers } from "./providers";
 import "./globals.css";
 
-// IBM Plex: família desenhada para interfaces técnicas, com versão mono para códigos de
-// ferramenta, identificadores e leituras numéricas.
-const sans = IBM_Plex_Sans({
+// Archivo: grotesca de origem técnica com eixo de largura variável. A mesma família faz o corpo
+// (largura normal), os títulos (expandida, como placa de máquina) e os códigos (condensada).
+const sans = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  axes: ["wdth"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const mono = IBM_Plex_Mono({
+// Martian Mono: só para identificadores técnicos (UUIDs), onde cada caractere precisa ser
+// inconfundível. Não é usada em rótulos.
+const mono = Martian_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  axes: ["wdth"],
   variable: "--font-mono",
   display: "swap",
 });
@@ -27,8 +29,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8f7f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e0f11" },
+    { media: "(prefers-color-scheme: light)", color: "#ebece9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1012" },
   ],
 };
 

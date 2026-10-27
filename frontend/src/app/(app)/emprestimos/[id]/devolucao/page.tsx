@@ -8,6 +8,7 @@ import { ErrorPanel } from "@/components/shared/error-panel";
 import { MonoId } from "@/components/shared/mono-id";
 import { PageHeader } from "@/components/shared/page-header";
 import { RetryButton } from "@/components/shared/retry-button";
+import { ToolTag } from "@/components/shared/tool-tag";
 import { Button } from "@/components/ui/button";
 import { buscarEmprestimo } from "@/features/emprestimos/api";
 import { DeadlineBar } from "@/features/emprestimos/components/deadline-bar";
@@ -35,7 +36,7 @@ export default async function DevolucaoPage({ params }: { params: { id: string }
   if (emprestimo.status !== "ACTIVE") {
     return (
       <EmptyState
-        className="mt-8"
+        className="mt-6 rounded-xl border"
         icon={<CheckCheck />}
         title="Este empréstimo já foi encerrado"
         description="A devolução já foi registrada. O checklist pode ser consultado no empréstimo."
@@ -51,20 +52,19 @@ export default async function DevolucaoPage({ params }: { params: { id: string }
   return (
     <>
       <PageHeader
-        eyebrow="Balcão · Devolução"
-        title={ferramenta.ok ? `Devolução: ${ferramenta.data.nome}` : "Registrar devolução"}
-        description="Preencha o checklist com a ferramenta em mãos. A comparação com a retirada aparece ao lado."
-        meta={
+        eyebrow={
           <>
-            <SituacaoBadge emprestimo={emprestimo} />
-            {ferramenta.ok && <span className="font-mono text-xs text-muted-foreground">{ferramenta.data.codigo}</span>}
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            {ferramenta.ok && <ToolTag codigo={ferramenta.data.codigo} grande />}
+            <span className="inline-flex items-center gap-1.5">
               membro <MonoId id={emprestimo.membroId} />
             </span>
           </>
         }
+        title={ferramenta.ok ? `Devolução: ${ferramenta.data.nome}` : "Registrar devolução"}
+        description="Preencha o checklist com a ferramenta em mãos. A comparação com a retirada acontece enquanto você preenche."
+        meta={<SituacaoBadge emprestimo={emprestimo} />}
       />
-      <div className="mb-5 max-w-xl">
+      <div className="mb-8 max-w-xl">
         <DeadlineBar emprestimo={emprestimo} />
       </div>
       <ReturnForm emprestimo={emprestimo} staffId={staff.id} />
