@@ -96,7 +96,7 @@ horangotango/
 │   └── docs/                         # PRD, contratos da API e guia de testes
 │       ├── postman/                  # Coleção Postman
 │       └── requisitos-n2/            # Artefatos de Engenharia de Requisitos
-└── frontend/                         # Área de outro integrante; apenas clear.md no estado atual
+└── frontend/                         # Next.js 14 (App Router) integrado à API; veja frontend/README.md
 ```
 
 ## Status dos requisitos
@@ -392,10 +392,14 @@ ordenados e rollback; mudanças de schema entram em um changeset novo no fim do 
 
 ## Frontend
 
-O diretório [`frontend/`](frontend/) pertence a outro integrante e contém apenas `clear.md`
-no estado atual. Ainda não há uma aplicação nem uma stack de frontend definida no código.
-O frontend consumirá a API; o backend já permite CORS de `http://localhost:3000` para
-`/api/**`, nos métodos GET, POST, PUT, PATCH e OPTIONS.
+O diretório [`frontend/`](frontend/) contém a interface web em Next.js 14, React 18, TypeScript,
+Tailwind e shadcn/ui, integrada a esta API: login JWT, catálogo, ciclo de vida das ferramentas,
+retirada e devolução com checklist, bloqueio por atraso, configurações e painel por papel.
+Instalação, arquitetura e limitações estão no [README do frontend](frontend/README.md); a evolução
+em relação ao frontend da N1 está em [`frontend/docs/EVOLUCAO_FRONTEND.md`](frontend/docs/EVOLUCAO_FRONTEND.md).
+
+As chamadas à API partem do servidor Next (o token JWT fica num cookie `httpOnly`), então o
+frontend não depende do CORS de `http://localhost:3000` já liberado pelo backend.
 
 ## Documentação
 
