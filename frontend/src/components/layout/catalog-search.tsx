@@ -1,0 +1,60 @@
+"use client";
+
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Search } from "lucide-react";
+
+import { ROTAS } from "@/lib/rotas";
+
+// Busca global do catálogo no cabeçalho. A tecla "/" foca o campo, como em ferramentas de
+// desenvolvimento; Enter leva ao catálogo filtrado.
+export function CatalogSearch() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const campo = useRef<HTMLInputElement>(null);
+  const [termo, setTermo] = useState("");
+
+  useEffect(() => {
+    function aoTeclar(evento: KeyboardEvent) {
+      const alvo = evento.target as HTMLElement | null;
+      const editando = alvo && (alvo.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(alvo.tagName));
+      if (evento.key === "/" && !editando && !evento.metaKey && !evento.ctrlKey) {
+        evento.preventDefault();
+        campo.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, []);
+
+  // No próprio catálogo a busca da página já está à vista; o campo do cabeçalho seria duplicado.
+  if (pathname === ROTAS.ferramentas) return null;
+
+  function enviar(evento: FormEvent) {
+    evento.preventDefault();
+    const valor = termo.trim();
+    router.push(valor ? `${ROTAS.ferramentas}?q=${encodeURIComponent(valor)}` : ROTAS.ferramentas);
+    setTermo("");
+    campo.current?.blur();
+  }
+
+  return (
+    <form role="search" onSubmit={enviar} className="relative">
+      <label htmlFor="busca-global" className="sr-only">
+        Buscar ferramenta no catálogo
+      </label>
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-subtle" aria-hidden />
+      <input
+        ref={campo}
+        id="busca-global"
+        value={termo}
+        onChange={(evento) => setTermo(evento.target.value)}
+        placeholder="Buscar ferramenta"
+        className="h-8 w-40 rounded-md border bg-surface pl-8 pr-8 text-sm transition-[width,border-color] placeholder:text-subtle hover:border-border-strong focus:w-56 focus:border-ring focus:outline-none sm:w-52 sm:focus:w-64"
+      />
+      <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border bg-surface-sunken px-1.5 font-mono text-2xs text-muted-foreground sm:block">
+        /
+      </kbd>
+    </form>
+  );
+}
