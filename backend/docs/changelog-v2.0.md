@@ -7,13 +7,21 @@ Swagger e o CRUD inicial de ferramentas.
 
 ## Estado da candidata
 
-Estado conferido em **25/10/2026**:
+Estado conferido em **26/10/2026**:
 
-- `main` remota em `149ec3d`: os **15 FRs do escopo N2** estão implementados.
-- O [PR de revisão da retirada e contratos da API](https://github.com/iagokoch/horangotango/pull/24)
-  está aberto, com correções de concorrência e ampliação de Swagger/Postman.
-- Este changelog é uma candidata. Antes da publicação, conferir a integração desse
-  PR e validar novamente a versão resultante da `main`.
+- `main` remota em `9e352b4`: os **15 FRs do escopo N2** estão implementados.
+- Os PRs [#24](https://github.com/iagokoch/horangotango/pull/24),
+  [#25](https://github.com/iagokoch/horangotango/pull/25),
+  [#30](https://github.com/iagokoch/horangotango/pull/30),
+  [#31](https://github.com/iagokoch/horangotango/pull/31) e
+  [#32](https://github.com/iagokoch/horangotango/pull/32) foram integrados.
+- A suíte completa da `main@9e352b4` passou com **239 testes em 27 classes**,
+  zero falhas, erros ou testes ignorados, com JDK 21, Docker e Maven offline.
+- O [PR #33](https://github.com/iagokoch/horangotango/pull/33), commit `86c882a`,
+  está aberto: rejeita decimais em `dias` e `versao`. Seus **264 testes em 28 classes**
+  são evidência dessa branch; a correção ainda não faz parte da `main` conferida.
+- Este changelog permanece uma candidata. A publicação depende da integração das
+  correções pendentes e da validação do commit final, incluindo `clean package`.
 
 As evidências abaixo identificam o código em que foram obtidas. A criação de tag e
 release é uma etapa posterior, sujeita à autorização do responsável pela entrega.
@@ -41,6 +49,11 @@ identificados na seção de continuidade para a N3.
   Revogação no servidor permanece na N3.
 - Membro consulta somente seus próprios empréstimos e checklists; Staff consulta qualquer um.
 - CORS está integrado ao Spring Security, incluindo o preflight dos métodos utilizados.
+- Cadastro e bootstrap limitam senhas a 72 bytes UTF-8, e o encoder recusa entradas
+  acima desse limite antes do BCrypt. O PR #30 mitiga a equivalência por truncamento
+  nos fluxos da aplicação; a dependência `spring-security-crypto` permanece em 6.3.1.
+  O upgrade e a redefinição controlada de senhas legadas acima de 72 bytes continuam
+  pendentes de decisão específica; não há fluxo novo de recuperação de senha.
 
 ### Ferramentas e compatibilidade com a N1
 
@@ -57,6 +70,10 @@ O modelo de Ferramenta passa a exigir `categoria`, `valorEstimado` e
 sentinela `NAO_INFORMADA`, `0.01`, `Não informado (migração)` e status `AVAILABLE`;
 esses dados podem ser revisados pelo Staff.
 
+O PR #31 trata também a disputa concorrente pelo mesmo código: POSTs resultam em
+`201`/`409` e PATCHs em `200`/`409`, sem duplicação ou alteração parcial da linha
+recusada. A tradução para conflito é específica da constraint de código único.
+
 ### Empréstimos, atraso e devolução
 
 - Retirada exige tomador Membro, ferramenta disponível e checklist completo.
@@ -72,6 +89,9 @@ esses dados podem ser revisados pelo Staff.
   a ferramenta participar de um novo empréstimo.
 - Lock pessimista e índice único parcial protegem a retirada da mesma ferramenta.
   Devoluções concorrentes do mesmo empréstimo resultam em um sucesso e um conflito.
+- Os GETs de detalhes e checklists usam o mesmo snapshot durante uma devolução
+  concorrente (PR #32). Uma consulta em andamento pode retornar o estado anterior
+  completo; uma nova consulta após o commit retorna o estado devolvido completo.
 
 ### Fronteira de erros
 
@@ -100,10 +120,10 @@ do servlet ainda podem utilizar o formato padrão do Spring Boot.
 - Os ITs usuais compartilham o container singleton e usam dados únicos.
   `ChangelogMigrationIT` utiliza banco isolado para aplicação e rollback.
 
-## Mudanças ainda em revisão no PR da retirada
+## Revisão da retirada e contratos integrada
 
-Estas mudanças estão no PR aberto, na branch `n2/revisao-retirada-api`, e ainda
-não fazem parte da `main` no estado registrado acima:
+As mudanças do [PR #24](https://github.com/iagokoch/horangotango/pull/24) já fazem
+parte da `main@9e352b4`:
 
 1. Revalidar o bloqueio depois de obter o lock da ferramenta. Um vencimento durante
    a espera passa a impedir a retirada com `409`.
@@ -114,16 +134,36 @@ não fazem parte da `main` no estado registrado acima:
 4. Declarar os schemas de sucesso/erro de Settings e Loans no Swagger e ampliar a
    coleção Postman para essas rotas, com documentação e status dos FRs atualizados.
 
+## Correção de inteiros JSON aguardando integração
+
+O [PR #33](https://github.com/iagokoch/horangotango/pull/33) atende à
+[issue #29](https://github.com/iagokoch/horangotango/issues/29): desabilita
+`ACCEPT_FLOAT_AS_INT` no Jackson da aplicação. Entradas como `dias: 1.9` e
+`versao: 0.9`, assim como tokens `1.0` ou `1e0` nos campos inteiros, passam a
+receber `400` com `ErrorResponse`, preservando os dados, a versão e a auditoria.
+Inteiros válidos, limites de dias de 1 a 365, conflito de versão inteira com `409`
+e valores monetários decimais continuam aceitos conforme seus contratos.
+
+Esse comportamento foi validado no commit `86c882a`; só deve ser apresentado como
+parte da `main` depois da integração e da conferência do commit resultante.
+
 ## Evidências já obtidas
 
 | Código validado | Verificação | Resultado registrado |
 |---|---|---|
 | Backend antes do PR, base `149ec3d` | `./mvnw test`, com JDK 21 e Docker | 181 testes, sem falhas ou erros |
-| Código do PR, consolidado em `0f49860` | `./mvnw test`, com JDK 21 e Docker | 183 testes, sem falhas ou erros |
-| Código do PR | Newman 6.2.3 em aplicação/banco temporários | Duas execuções de 71 requisições; 129 e 128 asserções aprovadas |
-| Código do PR | OpenAPI da aplicação em execução | 6 operações e 24 schemas de erro conferidos |
+| Código do PR #24, consolidado em `0f49860` | `./mvnw test`, com JDK 21 e Docker | 183 testes, sem falhas ou erros |
+| Código do PR #24 | Newman 6.2.3 em aplicação/banco temporários | Duas execuções de 71 requisições; 129 e 128 asserções aprovadas |
+| Código do PR #24 | OpenAPI da aplicação em execução | 6 operações de Settings/Loans e 24 schemas de erro conferidos |
+| Main integrada `9e352b4` | `./mvnw -o test`, com JDK 21 e Docker | 239 testes em 27 classes; zero falhas/erros/ignorados |
+| PR #33, commit `86c882a`, ainda aberto | `./mvnw -o -Dtest=IntegerJsonValidationIT,ReturnDeadlineControllerIT,ToolControllerIT test` | 64 testes; zero falhas/erros/ignorados |
+| PR #33, commit `86c882a`, ainda aberto | `./mvnw -o test`, com JDK 21 e Docker | 264 testes em 28 classes; zero falhas/erros/ignorados |
 
 Esses resultados são registros das verificações executadas durante o desenvolvimento.
+Os totais pertencem aos commits identificados e não devem ser somados. As execuções
+de 239 e 264 testes foram locais, em exportações limpas no TEMP, com dependências
+em cache; não representam checks de CI. A atualização deste documento não reexecutou
+Maven, Newman ou a aplicação.
 A validação final da release deve identificar o commit integrado que será entregue;
 `clean package` ainda pertence a essa etapa posterior.
 
