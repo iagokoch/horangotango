@@ -7,14 +7,22 @@ do backend. Reserve aproximadamente 15 minutos, conforme o ambiente.
 ## 1. Versão e preparação
 
 Este roteiro acompanha o [changelog candidato da v2.0](changelog-v2.0.md).
-Na conferência de 25/10/2026, a `main` estava em `149ec3d` e o
-[PR de revisão da retirada e contratos](https://github.com/iagokoch/horangotango/pull/24)
-continuava aberto. O fluxo básico já funciona nessa base; a regressão de espera por
-lock e a coleção Postman ampliada dependem da integração desse PR.
+Na conferência de **26/10/2026**, a `main@9e352b4` contém os PRs
+[#24](https://github.com/iagokoch/horangotango/pull/24),
+[#25](https://github.com/iagokoch/horangotango/pull/25),
+[#30](https://github.com/iagokoch/horangotango/pull/30),
+[#31](https://github.com/iagokoch/horangotango/pull/31) e
+[#32](https://github.com/iagokoch/horangotango/pull/32), com **239 testes em 27 classes**
+aprovados. As regressões de espera por lock, duplicidade concorrente de código e
+consulta consistente na devolução, além da coleção Postman ampliada, estão nessa base.
 
-Para apresentar a candidata completa, utilize um checkout que contenha o PR revisado.
-Registre o commit exibido por `git rev-parse --short HEAD`. Para a entrega final,
-prefira a versão integrada na `main`, após sua validação.
+O [PR #33](https://github.com/iagokoch/horangotango/pull/33), commit `86c882a`, ainda
+está aberto. Sua recusa de decimais em `dias`/`versao` tem **264 testes em 28 classes**
+aprovados na branch e não deve ser atribuída à `main@9e352b4`.
+
+Use a versão integrada da `main` e registre o commit exibido por
+`git rev-parse --short HEAD`. Para a entrega final, confira as integrações posteriores
+e valide o commit escolhido; a publicação da tag/release é uma etapa separada.
 
 Pré-requisitos: JDK 21, Docker em execução e um banco de desenvolvimento.
 No Git Bash, a partir da raiz do repositório:
@@ -61,6 +69,11 @@ do login correspondente, sem o prefixo `Bearer`.
 
 Explique que logout responde `204` e o cliente descarta o token. A revogação
 no servidor permanece na N3; o token emitido continua válido até expirar.
+
+O cadastro de Membro/Staff exige senha de pelo menos 8 caracteres e no máximo
+72 bytes UTF-8. Caracteres acentuados e emojis podem ocupar mais de um byte.
+Essa proteção do PR #30 não representa upgrade da dependência BCrypt nem resolução
+das contas legadas com senhas acima do limite; esses itens exigem decisão própria.
 
 ## 3. Catálogo de ferramentas — FR-3 / FR-4 / FR-5
 
@@ -192,7 +205,7 @@ apresentação. O atraso é calculado em tempo real, sem flag persistida nem job
 
 ## 8. Concorrência e evidência automatizada
 
-Na base `149ec3d`, estas classes já existem:
+Na `main@9e352b4`, execute:
 
 ```bash
 ./mvnw -Dtest=LoanControllerIT,LoanReturnIT test
@@ -202,7 +215,7 @@ Mostrar que duas retiradas da mesma ferramenta permitem apenas uma confirmação
 duas devoluções do mesmo empréstimo produzem um `200` e um `409`, com um único
 checklist `RETURN`.
 
-Em um checkout que contenha o PR de revisão, executar também:
+Execute também a regressão do PR #24, já integrado:
 
 ```bash
 ./mvnw -Dtest=LoanCheckoutReviewIT test
@@ -210,7 +223,17 @@ Em um checkout que contenha o PR de revisão, executar também:
 
 Seus dois testes verificam mudanças durante a espera pelo lock: empréstimo que
 vence nesse intervalo passa a bloquear, e novo prazo padrão passa a valer para a
-retirada confirmada depois da espera. Essa classe ainda não existe na base `149ec3d`.
+retirada confirmada depois da espera.
+
+Para os cenários dos PRs #31 e #32, também integrados:
+
+```bash
+./mvnw -Dtest=ToolCodigoConcurrencyIT,LoanReadConsistencyIT test
+```
+
+O primeiro verifica conflito `409` para código duplicado concorrente, com unicidade
+e rollback da edição recusada. O segundo verifica que os GETs de detalhes e checklists,
+por dono ou Staff, observam um estado completo durante a devolução concorrente.
 
 Para a evidência completa do backend:
 
@@ -218,17 +241,36 @@ Para a evidência completa do backend:
 ./mvnw test
 ```
 
-Resultados já registrados: **181 testes** na base `149ec3d` e **183 testes** no código
-do PR, consolidado em `0f49860`, sem falhas ou erros. Registre o resultado efetivo
-da versão utilizada na apresentação; a quantidade pode mudar com novas integrações.
+Resultado da versão integrada: **239 testes em 27 classes** na `main@9e352b4`,
+com zero falhas, erros ou testes ignorados, executando `./mvnw -o test` com
+JDK 21 e Docker. O modo `-o` usa as dependências já disponíveis no cache local.
+Os resultados anteriores de 181 testes em `149ec3d` e 183 em `0f49860` ficam
+identificados como históricos no changelog.
+
+O PR #33, commit `86c882a`, passou com 64 testes focados e **264 testes em 28 classes**
+na suíte completa. Se for demonstrar a correção, confira que o checkout contém esse
+commit ou sua integração e execute:
+
+```bash
+./mvnw -Dtest=IntegerJsonValidationIT test
+```
+
+Os 25 casos conferem o `400` para decimais, preservação dos dados/versão/auditoria,
+inteiros e limites válidos, aceitação de valores monetários decimais e conflito de
+versão inteira com `409`. Essa classe ainda não existe na `main@9e352b4`.
+
+Os totais de 239 e 264 são evidências locais de versões distintas, obtidas em
+exportações limpas no TEMP; não são checks de CI nem devem ser somados. Esta revisão
+documental não reexecutou as suítes. Registre o resultado efetivo do commit usado na
+apresentação, pois a quantidade pode mudar com novas integrações.
 
 ## 9. Alternativa com a coleção Postman
 
 A [coleção versionada](postman/monitoolring.postman_collection.json) pode executar os
-fluxos repetitivos da apresentação. Na base `149ec3d`, cobre Health, Auth, Staff e
-Tools. A ampliação para Settings e Loans está no PR de revisão.
+fluxos repetitivos da apresentação. Na `main@9e352b4`, já cobre Health, Auth, Staff,
+Tools, Settings e Loans, com 71 requisições; a ampliação do PR #24 está integrada.
 
-Depois de integrar esse PR, execute a coleção inteira em ordem:
+Execute a coleção inteira em ordem:
 **Health → Auth → Staff → Tools → Settings → Loans**. Ajuste `baseUrl` e as credenciais
 do ambiente no Postman. A coleção cria dados únicos e restaura o prazo inicial
 quando já existia; se não estava configurado, deixa-o em 7 dias.
@@ -239,9 +281,10 @@ Com Newman disponível, de dentro de `backend/`:
 npx newman run docs/postman/monitoolring.postman_collection.json
 ```
 
-A versão ampliada foi validada em duas execuções de 71 requisições, com 129 e 128
-asserções aprovadas. Atraso e concorrência são demonstrados pelos ITs, não por espera
-real de dias durante a execução da coleção.
+A versão ampliada no código do PR #24 foi validada em duas execuções de 71 requisições,
+com 129 e 128 asserções aprovadas. São evidências históricas; Newman não foi reexecutado
+na revisão documental nem na validação Maven da `main@9e352b4`. Atraso e concorrência
+são demonstrados pelos ITs, não por espera real de dias durante a execução da coleção.
 
 ## 10. Evidências e encerramento
 
