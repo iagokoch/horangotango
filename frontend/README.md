@@ -28,7 +28,7 @@ justificativas estão em [`docs/EVOLUCAO_FRONTEND.md`](docs/EVOLUCAO_FRONTEND.md
 | Framework | Next.js 14.2 (App Router, Server Components, Server Actions, Middleware) |
 | UI | React 18, Tailwind CSS 3, componentes shadcn/ui sobre Radix UI, personalizados |
 | Formulários | React Hook Form + Zod 4 (`@hookform/resolvers`) |
-| Ícones e tipografia | Lucide React; IBM Plex Sans e IBM Plex Mono (`next/font`) |
+| Ícones e tipografia | Lucide React; Archivo (eixo de largura variável) e Martian Mono (`next/font`) |
 | Feedback | Sonner (toasts), `next-themes` (tema claro, escuro e do sistema) |
 | Testes | Vitest (regras de domínio, validação, sessão e mensagens) |
 
@@ -157,13 +157,13 @@ src/
 ├── components/
 │   ├── ui/                   # design system (button, input, form, panel, badge, dialog, table…)
 │   ├── layout/               # app shell, sidebar, navegação por papel, breadcrumbs, menu do usuário
-│   └── shared/               # page header, callout, empty state, error panel, copy, mono id
+│   └── shared/               # page header, section heading, data list, tool tag, callout, empty state, error panel, copy, mono id
 ├── features/
 │   ├── auth/                 # schemas, actions (login, cadastro, logout), formulários
 │   ├── ferramentas/          # tipos, status/ciclo de vida, schemas, api, actions, catálogo, formulário
 │   ├── emprestimos/          # tipos, situação/atraso/bloqueio, checklist, retirada, devolução, acompanhamento
 │   ├── configuracoes/        # prazo padrão e conta Staff
-│   └── painel/               # KPIs, quadro de sombras, barras por categoria
+│   └── painel/               # régua do acervo, quadro de sombras, barras por categoria
 ├── lib/
 │   ├── api/                  # cliente HTTP server-only, ActionResult, mensagens de erro
 │   ├── auth/                 # cookie de sessão (codec compartilhado com o middleware)
@@ -173,24 +173,32 @@ src/
 
 ## Design system
 
-Identidade **"Grafite + Laranja de Sinalização"**: neutros quentes de concreto (claro) e grafite
-(escuro), com uma única cor de marca, o laranja de segurança das máquinas de oficina, reservada
-para a ação principal, o foco e a navegação ativa.
+Identidade **"Etiqueta & Bancada"**: a área de trabalho é uma chapa de aço frio (`--canvas`) e o
+conteúdo fica numa folha branca encaixada nela; no celular, a folha ocupa a tela inteira. O texto
+é grafite, e o botão primário também. Há uma única cor de marca, o **amarelo-etiqueta**, reservada
+para indicar o que está selecionado, ativo ou em destaque. Os detalhes e a justificativa estão em
+[`docs/EVOLUCAO_FRONTEND.md`](docs/EVOLUCAO_FRONTEND.md#4-redesign-etiqueta--bancada).
 
 - **Tokens** em `src/app/globals.css` (variáveis HSL por tema) expostos no `tailwind.config.ts`:
-  superfícies (`surface`, `surface-sunken`), bordas, `brand`, `primary`, `destructive` e cores de
-  status (`status-available`, `-loan`, `-repair`, `-lost`, `-inactive`, `-overdue`).
-- **Tipografia:** IBM Plex Sans para interface, IBM Plex Mono para códigos, IDs, rótulos técnicos
-  e leituras numéricas. Escala compacta (corpo de 14 px).
-- **Motivos visuais:** régua milimetrada sob os cabeçalhos, painel perfurado (pegboard) e o
+  chapa e folha (`canvas`, `surface`, `surface-sunken`), bordas, `primary` (grafite), `brand`
+  (amarelo), `ring`, `destructive`, cores de status (`status-available`, `-loan`, `-repair`,
+  `-lost`, `-inactive`, `-overdue`), raios (`sheet`), sombras (`sheet`, `raised`, `overlay`,
+  `focus`) e animações nomeadas. O tema escuro troca só as variáveis.
+- **Tipografia:** Archivo, com eixo de largura, para corpo, títulos expandidos (`.font-display`) e
+  códigos condensados (`.font-condensed`, `.tool-tag`). Martian Mono só para UUIDs. Escala compacta
+  (corpo de 14 px).
+- **Etiqueta da ferramenta (`ToolTag`):** o código aparece sempre como etiqueta física, em todas as
+  telas.
+- **Componentes próprios:** `FilterTabs` e `Segmented` (`components/ui/segmented.tsx`), `DataList`,
+  `SectionHeading`, `InventoryStrip` (régua do acervo no painel), `ChecklistComparison` e o
   **quadro de sombras**, em que cada vaga é uma ferramenta real e uma vaga tracejada mostra o que
   está fora da oficina.
 - **Status nunca dependem só da cor:** sempre ícone + rótulo (e texto para leitores de tela).
 - **Botões:** `primary`, `secondary`, `ghost`, `destructive`, `destructive-ghost`, `link`, com
   estado de carregamento embutido.
-- **Acessibilidade:** contraste AA nos dois temas, foco visível, link "pular para o conteúdo",
-  rótulos e mensagens de erro ligados aos campos (`aria-describedby`/`aria-invalid`), grupos de
-  rádio com teclado, `prefers-reduced-motion` respeitado.
+- **Acessibilidade:** foco visível, link "pular para o conteúdo", rótulos e mensagens de erro
+  ligados aos campos (`aria-describedby`/`aria-invalid`), grupos de rádio com teclado e
+  `prefers-reduced-motion` respeitado.
 
 ## Validação
 
@@ -201,11 +209,14 @@ para a ação principal, o foco e a navegação ativa.
 | `npm test` | 44 testes Vitest: atraso e bloqueio, comparação de checklists, ciclo de vida, conversão de valores, PATCH parcial, sessão, redirect seguro, regras de senha e rotas de Staff |
 | `npm run build` | Build de produção |
 | `npm run validate` | Todos os anteriores em sequência |
+| `npm run test:e2e` | Roteiro ponta a ponta de 94 passos pela interface, contra a API real e um banco de teste isolado. Exige backend, frontend e banco preparados: veja [`e2e/README.md`](e2e/README.md) |
 
-Os fluxos ponta a ponta (login, permissões, cadastro e edição de ferramentas, inativação,
-retirada, bloqueio por atraso, devolução com divergência, consulta pelo membro, expiração de
-sessão, responsividade e tema escuro) foram verificados contra a API real. O registro está em
-[`docs/EVOLUCAO_FRONTEND.md`](docs/EVOLUCAO_FRONTEND.md#validação).
+Depois do redesign, um roteiro ponta a ponta de 94 passos foi executado pela interface contra a
+API real e um PostgreSQL de teste, com 94 aprovados. O roteiro cobre login, permissões e papel
+forjado, cadastro, edição com conflito de versão, inativação, retirada, bloqueio por atraso e
+liberação, devolução com divergência, consulta pelo membro, expiração e adulteração de sessão,
+retirada e devolução no celular, e ausência de rolagem horizontal em 390, 820 e 1440 px. O registro
+completo está em [`docs/EVOLUCAO_FRONTEND.md`](docs/EVOLUCAO_FRONTEND.md#9-validações).
 
 ## Limitações conhecidas
 

@@ -48,7 +48,7 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 export function CheckoutForm({ ferramentas, ferramentaInicialId, diasPrazo, staffId }: CheckoutFormProps) {
   const router = useRouter();
   const [erro, setErro] = useState<ActionError | null>(null);
-  const [confirmado, setConfirmado] = useState<Emprestimo | null>(null);
+  const [confirmado, setConfirmado] = useState<{ emprestimo: Emprestimo; ferramenta?: Ferramenta } | null>(null);
 
   const inicialValida = ferramentas.some((ferramenta) => ferramenta.id === ferramentaInicialId);
   const form = useForm<ValoresRetirada, unknown, DadosRetiradaForm>({
@@ -71,6 +71,9 @@ export function CheckoutForm({ ferramentas, ferramentaInicialId, diasPrazo, staf
 
   async function confirmar(dados: DadosRetiradaForm) {
     setErro(null);
+    // Guardada antes da chamada: a revalidação da action recarrega a lista só com as disponíveis,
+    // e a ferramenta recém-emprestada deixa de estar nela.
+    const ferramenta = ferramentas.find((item) => item.id === dados.ferramentaId);
     const resultado = await acaoRegistrarRetirada({
       ferramentaId: dados.ferramentaId,
       membroId: dados.membroId,
@@ -94,7 +97,7 @@ export function CheckoutForm({ ferramentas, ferramentaInicialId, diasPrazo, staf
     }
 
     acompanhar(staffId, resultado.data.id);
-    setConfirmado(resultado.data);
+    setConfirmado({ emprestimo: resultado.data, ferramenta });
     toast.success("Retirada confirmada.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -102,8 +105,8 @@ export function CheckoutForm({ ferramentas, ferramentaInicialId, diasPrazo, staf
   if (confirmado) {
     return (
       <Comprovante
-        emprestimo={confirmado}
-        ferramenta={ferramentas.find((ferramenta) => ferramenta.id === confirmado.ferramentaId)}
+        emprestimo={confirmado.emprestimo}
+        ferramenta={confirmado.ferramenta}
         onNovaRetirada={() => {
           setConfirmado(null);
           form.reset({ ferramentaId: "", membroId: "", checklist: CHECKLIST_VAZIO });
