@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: monitoolring-frontend:local
+    container_name: monitoolring-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # O servidor Next chama a API de dentro do container. Com o backend rodando no host
+      # (./mvnw spring-boot:run), host.docker.internal aponta para a máquina hospedeira.
+      API_URL: ${API_URL:-http://host.docker.internal:8080/api}
+      NEXT_PUBLIC_TIME_ZONE: America/Sao_Paulo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
