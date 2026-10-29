@@ -1,30 +1,32 @@
-# Monitoolring — changelog candidato da v2.0 do backend
+# Monitoolring — changelog da v2.0 do backend
 
-Este documento reúne as mudanças do backend para a entrega individual da N2 e as
+Este documento reúne as mudanças do backend na entrega N2 (versão **v2.0**) da equipe checkflow e as
 pendências para a N3. A base de comparação é a branch `master` da N1, importada no
 monorepo, que já continha validação de JWT, JPA/PostgreSQL, Liquibase, MapStruct,
 Swagger e o CRUD inicial de ferramentas.
 
-## Estado da candidata
+## Estado da v2.0
 
-Estado conferido em **26/10/2026**:
+Estado conferido em **29/10/2026**, sobre a `main` em `8a8dd23` (merge do
+[PR #35](https://github.com/iagokoch/horangotango/pull/35), de 28/10/2026):
 
-- `main` remota em `9e352b4`: os **15 FRs do escopo N2** estão implementados.
-- Os PRs [#24](https://github.com/iagokoch/horangotango/pull/24),
+- Os **15 FRs do escopo N2** estão implementados no backend.
+- Backend e requisitos integrados por Pull Request: [#23](https://github.com/iagokoch/horangotango/pull/23)
+  (requisitos), [#24](https://github.com/iagokoch/horangotango/pull/24),
   [#25](https://github.com/iagokoch/horangotango/pull/25),
   [#30](https://github.com/iagokoch/horangotango/pull/30),
   [#31](https://github.com/iagokoch/horangotango/pull/31) e
-  [#32](https://github.com/iagokoch/horangotango/pull/32) foram integrados.
-- A suíte completa da `main@9e352b4` passou com **239 testes em 27 classes**,
-  zero falhas, erros ou testes ignorados, com JDK 21, Docker e Maven offline.
-- O [PR #33](https://github.com/iagokoch/horangotango/pull/33), commit `86c882a`,
-  está aberto: rejeita decimais em `dias` e `versao`. Seus **264 testes em 28 classes**
-  são evidência dessa branch; a correção ainda não faz parte da `main` conferida.
-- Este changelog permanece uma candidata. A publicação depende da integração das
-  correções pendentes e da validação do commit final, incluindo `clean package`.
+  [#32](https://github.com/iagokoch/horangotango/pull/32) em 26/10/2026;
+  [#33](https://github.com/iagokoch/horangotango/pull/33) (decimais em `dias` e `versao`) e
+  [#34](https://github.com/iagokoch/horangotango/pull/34) (documentação) em 27/10/2026.
+- O [PR #35](https://github.com/iagokoch/horangotango/pull/35) reconstruiu o
+  [frontend](../../frontend/README.md) integrado a esta API, sem alterar o código do backend.
+- A validação final de 29/10/2026 (seção [Validação da v2.0](#validação-da-v20)) passou no backend
+  com **264 testes em 28 classes**, zero falhas, erros ou ignorados, e no frontend com 44 testes
+  Vitest; `clean package` e `npm run validate` também passaram.
 
-As evidências abaixo identificam o código em que foram obtidas. A criação de tag e
-release é uma etapa posterior, sujeita à autorização do responsável pela entrega.
+As evidências abaixo identificam o commit em que foram obtidas. A tag e a release **v2.0**
+congelam este estado, depois do merge da documentação de entrega.
 
 ## Funcionalidades implementadas na main
 
@@ -120,10 +122,10 @@ do servlet ainda podem utilizar o formato padrão do Spring Boot.
 - Os ITs usuais compartilham o container singleton e usam dados únicos.
   `ChangelogMigrationIT` utiliza banco isolado para aplicação e rollback.
 
-## Revisão da retirada e contratos integrada
+## Revisão da retirada e contratos (PR #24)
 
-As mudanças do [PR #24](https://github.com/iagokoch/horangotango/pull/24) já fazem
-parte da `main@9e352b4`:
+As mudanças do [PR #24](https://github.com/iagokoch/horangotango/pull/24), integradas em
+26/10/2026 (já presentes na `main@9e352b4`):
 
 1. Revalidar o bloqueio depois de obter o lock da ferramenta. Um vencimento durante
    a espera passa a impedir a retirada com `409`.
@@ -134,7 +136,7 @@ parte da `main@9e352b4`:
 4. Declarar os schemas de sucesso/erro de Settings e Loans no Swagger e ampliar a
    coleção Postman para essas rotas, com documentação e status dos FRs atualizados.
 
-## Correção de inteiros JSON aguardando integração
+## Correção de inteiros JSON (PR #33)
 
 O [PR #33](https://github.com/iagokoch/horangotango/pull/33) atende à
 [issue #29](https://github.com/iagokoch/horangotango/issues/29): desabilita
@@ -144,8 +146,8 @@ receber `400` com `ErrorResponse`, preservando os dados, a versão e a auditoria
 Inteiros válidos, limites de dias de 1 a 365, conflito de versão inteira com `409`
 e valores monetários decimais continuam aceitos conforme seus contratos.
 
-Esse comportamento foi validado no commit `86c882a`; só deve ser apresentado como
-parte da `main` depois da integração e da conferência do commit resultante.
+O PR foi integrado em 27/10/2026 (merge `80652d5`); o comportamento foi validado no commit
+`86c882a` e faz parte da `main` a partir daí.
 
 ## Evidências já obtidas
 
@@ -156,16 +158,32 @@ parte da `main` depois da integração e da conferência do commit resultante.
 | Código do PR #24 | Newman 6.2.3 em aplicação/banco temporários | Duas execuções de 71 requisições; 129 e 128 asserções aprovadas |
 | Código do PR #24 | OpenAPI da aplicação em execução | 6 operações de Settings/Loans e 24 schemas de erro conferidos |
 | Main integrada `9e352b4` | `./mvnw -o test`, com JDK 21 e Docker | 239 testes em 27 classes; zero falhas/erros/ignorados |
-| PR #33, commit `86c882a`, ainda aberto | `./mvnw -o -Dtest=IntegerJsonValidationIT,ReturnDeadlineControllerIT,ToolControllerIT test` | 64 testes; zero falhas/erros/ignorados |
-| PR #33, commit `86c882a`, ainda aberto | `./mvnw -o test`, com JDK 21 e Docker | 264 testes em 28 classes; zero falhas/erros/ignorados |
+| PR #33, commit `86c882a` (integrado em 27/10/2026) | `./mvnw -o -Dtest=IntegerJsonValidationIT,ReturnDeadlineControllerIT,ToolControllerIT test` | 64 testes; zero falhas/erros/ignorados |
+| PR #33, commit `86c882a` (integrado em 27/10/2026) | `./mvnw -o test`, com JDK 21 e Docker | 264 testes em 28 classes; zero falhas/erros/ignorados |
 
 Esses resultados são registros das verificações executadas durante o desenvolvimento.
 Os totais pertencem aos commits identificados e não devem ser somados. As execuções
 de 239 e 264 testes foram locais, em exportações limpas no TEMP, com dependências
-em cache; não representam checks de CI. A atualização deste documento não reexecutou
-Maven, Newman ou a aplicação.
-A validação final da release deve identificar o commit integrado que será entregue;
-`clean package` ainda pertence a essa etapa posterior.
+em cache; não representam checks de CI. Os registros acima são históricos e não foram reexecutados.
+A validação do commit entregue está em [Validação da v2.0](#validação-da-v20).
+
+## Validação da v2.0
+
+Código validado: `main@8a8dd23`. Os commits seguintes, na branch `docs/entrega-n2`, alteram apenas
+documentação e não tocam em `backend/src` nem em `frontend/src`.
+
+| Verificação | Ambiente | Resultado |
+|---|---|---|
+| `./mvnw -B test` em `backend/` | JDK 21 (`eclipse-temurin:21-jdk`) num contêiner, com Docker Engine do WSL2 e Testcontainers 1.21.4 sobre PostgreSQL | **264 testes em 28 classes**; falhas 0, erros 0, ignorados 0; `BUILD SUCCESS` |
+| `./mvnw -B clean package` em `backend/` | Mesmo ambiente | `BUILD SUCCESS`; JAR `api-0.0.1-SNAPSHOT.jar` gerado, com os mesmos 264 testes aprovados |
+| `npm ci && npm run validate` em `frontend/` | Node.js 20.20.2, Windows | `tsc --noEmit` sem erros; ESLint sem avisos; Vitest **44/44** em 3 arquivos; `next build` concluído |
+
+Observações: o total de 264 coincide com o do PR #33 (`86c882a`); os PRs seguintes só alteraram
+documentação e frontend. A execução foi local, em uma cópia do diretório `backend/` sem `target/`;
+não é um check de CI. Os `ERROR ... uq_ferramentas_codigo` no log do Maven vêm de
+`ToolCodigoConcurrencyIT`, que provoca a violação de propósito. Newman e o roteiro E2E do frontend
+(`npm run test:e2e`) não foram reexecutados nesta validação; seus resultados são os registrados em
+[Evidências já obtidas](#evidências-já-obtidas) e em `frontend/docs/EVOLUCAO_FRONTEND.md` §9.3.
 
 ## Continuidade para a N3
 
@@ -193,4 +211,5 @@ e decisão de encaminhamento para reparo pertencem à N3.
 - [Nomenclatura da API](api-nomenclatura-recursos.md).
 - [Guia de testes manuais](testing-manual.md).
 - [Roteiro de demonstração do backend](roteiro-demonstracao-n2.md).
-- [Visão geral do projeto](../../README.md).
+- [Visão geral do projeto](../../README.md), [DER](../../docs/DER/README.md),
+  [débitos técnicos](../../docs/debitos-tecnicos/README.md) e [handoff](../../docs/handoff/README.md).

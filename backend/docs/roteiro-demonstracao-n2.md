@@ -6,23 +6,21 @@ do backend. Reserve aproximadamente 15 minutos, conforme o ambiente.
 
 ## 1. Versão e preparação
 
-Este roteiro acompanha o [changelog candidato da v2.0](changelog-v2.0.md).
-Na conferência de **26/10/2026**, a `main@9e352b4` contém os PRs
-[#24](https://github.com/iagokoch/horangotango/pull/24),
-[#25](https://github.com/iagokoch/horangotango/pull/25),
-[#30](https://github.com/iagokoch/horangotango/pull/30),
-[#31](https://github.com/iagokoch/horangotango/pull/31) e
-[#32](https://github.com/iagokoch/horangotango/pull/32), com **239 testes em 27 classes**
-aprovados. As regressões de espera por lock, duplicidade concorrente de código e
-consulta consistente na devolução, além da coleção Postman ampliada, estão nessa base.
+Este roteiro acompanha o [changelog da v2.0](changelog-v2.0.md). Na conferência de
+**29/10/2026**, a `main@8a8dd23` contém todos os PRs da N2: [#24](https://github.com/iagokoch/horangotango/pull/24),
+[#25](https://github.com/iagokoch/horangotango/pull/25), [#30](https://github.com/iagokoch/horangotango/pull/30),
+[#31](https://github.com/iagokoch/horangotango/pull/31) e [#32](https://github.com/iagokoch/horangotango/pull/32)
+(26/10), [#33](https://github.com/iagokoch/horangotango/pull/33) e [#34](https://github.com/iagokoch/horangotango/pull/34)
+(27/10), além do frontend ([#35](https://github.com/iagokoch/horangotango/pull/35), 28/10).
+As regressões de espera por lock, duplicidade concorrente de código, consulta consistente na
+devolução e recusa de decimais em campos inteiros, além da coleção Postman ampliada, estão nessa base.
 
-O [PR #33](https://github.com/iagokoch/horangotango/pull/33), commit `86c882a`, ainda
-está aberto. Sua recusa de decimais em `dias`/`versao` tem **264 testes em 28 classes**
-aprovados na branch e não deve ser atribuída à `main@9e352b4`.
+Cada total de testes citado abaixo pertence a um commit identificado (`9e352b4`, `86c882a`
+ou o commit validado da v2.0); o total do commit entregue está no changelog, em
+[Validação da v2.0](changelog-v2.0.md#validação-da-v20).
 
-Use a versão integrada da `main` e registre o commit exibido por
-`git rev-parse --short HEAD`. Para a entrega final, confira as integrações posteriores
-e valide o commit escolhido; a publicação da tag/release é uma etapa separada.
+Use a versão tagueada `v2.0` (ou a `main`) e registre o commit exibido por
+`git rev-parse --short HEAD`.
 
 Pré-requisitos: JDK 21, Docker em execução e um banco de desenvolvimento.
 No Git Bash, a partir da raiz do repositório:
@@ -205,7 +203,7 @@ apresentação. O atraso é calculado em tempo real, sem flag persistida nem job
 
 ## 8. Concorrência e evidência automatizada
 
-Na `main@9e352b4`, execute:
+Na `main`, execute:
 
 ```bash
 ./mvnw -Dtest=LoanControllerIT,LoanReturnIT test
@@ -215,7 +213,7 @@ Mostrar que duas retiradas da mesma ferramenta permitem apenas uma confirmação
 duas devoluções do mesmo empréstimo produzem um `200` e um `409`, com um único
 checklist `RETURN`.
 
-Execute também a regressão do PR #24, já integrado:
+Execute também a regressão do PR #24:
 
 ```bash
 ./mvnw -Dtest=LoanCheckoutReviewIT test
@@ -225,7 +223,7 @@ Seus dois testes verificam mudanças durante a espera pelo lock: empréstimo que
 vence nesse intervalo passa a bloquear, e novo prazo padrão passa a valer para a
 retirada confirmada depois da espera.
 
-Para os cenários dos PRs #31 e #32, também integrados:
+Para os cenários dos PRs #31 e #32:
 
 ```bash
 ./mvnw -Dtest=ToolCodigoConcurrencyIT,LoanReadConsistencyIT test
@@ -241,15 +239,13 @@ Para a evidência completa do backend:
 ./mvnw test
 ```
 
-Resultado da versão integrada: **239 testes em 27 classes** na `main@9e352b4`,
-com zero falhas, erros ou testes ignorados, executando `./mvnw -o test` com
-JDK 21 e Docker. O modo `-o` usa as dependências já disponíveis no cache local.
-Os resultados anteriores de 181 testes em `149ec3d` e 183 em `0f49860` ficam
-identificados como históricos no changelog.
+Resultado no commit `9e352b4` (26/10/2026): **239 testes em 27 classes**, com zero falhas, erros
+ou testes ignorados, executando `./mvnw -o test` com JDK 21 e Docker. O modo `-o` usa as
+dependências já disponíveis no cache local. Os resultados anteriores de 181 testes em `149ec3d` e
+183 em `0f49860` ficam identificados como históricos no changelog.
 
-O PR #33, commit `86c882a`, passou com 64 testes focados e **264 testes em 28 classes**
-na suíte completa. Se for demonstrar a correção, confira que o checkout contém esse
-commit ou sua integração e execute:
+O PR #33 (commit `86c882a`, hoje integrado) passou com 64 testes focados e **264 testes em
+28 classes** na suíte completa. Para demonstrar a correção:
 
 ```bash
 ./mvnw -Dtest=IntegerJsonValidationIT test
@@ -257,18 +253,18 @@ commit ou sua integração e execute:
 
 Os 25 casos conferem o `400` para decimais, preservação dos dados/versão/auditoria,
 inteiros e limites válidos, aceitação de valores monetários decimais e conflito de
-versão inteira com `409`. Essa classe ainda não existe na `main@9e352b4`.
+versão inteira com `409`. Essa classe só existe a partir do PR #33, isto é, não está em `9e352b4`.
 
-Os totais de 239 e 264 são evidências locais de versões distintas, obtidas em
-exportações limpas no TEMP; não são checks de CI nem devem ser somados. Esta revisão
-documental não reexecutou as suítes. Registre o resultado efetivo do commit usado na
-apresentação, pois a quantidade pode mudar com novas integrações.
+Os totais de 239 e 264 são evidências locais de commits distintos, obtidas em exportações
+limpas no TEMP; não são checks de CI nem devem ser somados. O resultado do commit entregue na
+v2.0 está no changelog. Registre o resultado efetivo do commit usado na apresentação, pois a
+quantidade pode mudar com novas integrações.
 
 ## 9. Alternativa com a coleção Postman
 
 A [coleção versionada](postman/monitoolring.postman_collection.json) pode executar os
-fluxos repetitivos da apresentação. Na `main@9e352b4`, já cobre Health, Auth, Staff,
-Tools, Settings e Loans, com 71 requisições; a ampliação do PR #24 está integrada.
+fluxos repetitivos da apresentação. Na `main`, cobre Health, Auth, Staff,
+Tools, Settings e Loans, com 71 requisições (ampliação do PR #24).
 
 Execute a coleção inteira em ordem:
 **Health → Auth → Staff → Tools → Settings → Loans**. Ajuste `baseUrl` e as credenciais
@@ -283,7 +279,7 @@ npx newman run docs/postman/monitoolring.postman_collection.json
 
 A versão ampliada no código do PR #24 foi validada em duas execuções de 71 requisições,
 com 129 e 128 asserções aprovadas. São evidências históricas; Newman não foi reexecutado
-na revisão documental nem na validação Maven da `main@9e352b4`. Atraso e concorrência
+na revisão documental nem nas validações Maven. Atraso e concorrência
 são demonstrados pelos ITs, não por espera real de dias durante a execução da coleção.
 
 ## 10. Evidências e encerramento
@@ -293,9 +289,10 @@ mostrem: retirada `201`, checklist incompleto `422`, acesso indevido `403`, devo
 `200` com os dois checklists e nova disponibilidade. Use os ITs para evidenciar
 bloqueio, liberação e concorrência.
 
-Encerre apresentando o [changelog candidato](changelog-v2.0.md) e os quatro FRs da N3:
+Encerre apresentando o [changelog da v2.0](changelog-v2.0.md) e os quatro FRs da N3:
 histórico de Membro por Staff (FR-6), próprios empréstimos (FR-7), divergência (FR-15)
 e perda/furto (FR-19). O changelog também identifica as demais pendências técnicas.
 
 Referências: [PRD](prd.md), [convenções HTTP](api-convencoes-http.md),
-[guia de testes manuais](testing-manual.md) e [visão geral](../../README.md).
+[guia de testes manuais](testing-manual.md), [visão geral](../../README.md) e
+[handoff](../../docs/handoff/README.md).
