@@ -12,12 +12,38 @@ Este é o monorepo [iagokoch/horangotango](https://github.com/iagokoch/horangota
 `backend/`, `frontend/` e documentação. O projeto acadêmico evolui em três entregas:
 
 - **N1:** base da API, importada da branch `master` do backend original.
-- **N2:** entrega individual de backend, com meta de **15 dos 19 requisitos funcionais**
-  do PRD (aproximadamente 79%). O frontend e os artefatos de requisitos são de outros integrantes.
-- **N3:** continuidade pela equipe, com os quatro FRs restantes e as evoluções documentadas.
+- **N2:** entrega da equipe [checkflow](#equipe), versão [**v2.0**](https://github.com/iagokoch/horangotango/releases/tag/v2.0):
+  **15 dos 19 requisitos funcionais** do PRD (aproximadamente 79%) no backend, frontend
+  reconstruído e integrado à API, artefatos de Engenharia de Requisitos, DER, registro de débitos
+  técnicos e documento de handoff.
+- **N3:** continuidade, com os quatro FRs restantes e as evoluções documentadas. O
+  [handoff](docs/handoff/README.md) orienta a equipe que receber o projeto.
+
+## Equipe
+
+A equipe **checkflow** recebeu o case **Monitoolring** do grupo **horangotango**, cujos repositórios
+originais são [horangotango/monitoolring--backend](https://github.com/horangotango/monitoolring--backend)
+e [horangotango/monitoolring--frontend](https://github.com/horangotango/monitoolring--frontend), e o
+refez e corrigiu neste repositório.
+
+| Integrante | Papel |
+|---|---|
+| William Vodzinsky | Product Owner (PO) |
+| Patrick Gusmão ([@patrickgusmao10](https://github.com/patrickgusmao10)) | Engenheiro de Requisitos |
+| Pedro Israel | Quality Assurance (QA) |
+| João Francisco da Silva ([@joaofsdev](https://github.com/joaofsdev)) | Desenvolvedor Frontend |
+| Iago Koch ([@iagokoch](https://github.com/iagokoch)) | Desenvolvedor Backend |
+| Caio Rosa | DevOps |
+
+O que cada pessoa fez na N2 está na [matriz de papéis](docs/matriz-de-papeis.md). A gestão do
+trabalho é feita por issues e milestones ([N2 — v2.0](https://github.com/iagokoch/horangotango/milestone/1)
+e [N3](https://github.com/iagokoch/horangotango/milestone/2)); o quadro de gestão está no
+[GitHub Projects da equipe](https://github.com/users/joaofsdev/projects/1), que reúne as issues
+dos dois milestones.
 
 ## Sumário
 
+- [Equipe](#equipe)
 - [Domínio e ciclo da ferramenta](#domínio-e-ciclo-da-ferramenta)
 - [Estrutura do monorepo](#estrutura-do-monorepo)
 - [Status dos requisitos](#status-dos-requisitos)
@@ -96,7 +122,13 @@ horangotango/
 │   └── docs/                         # PRD, contratos da API e guia de testes
 │       ├── postman/                  # Coleção Postman
 │       └── requisitos-n2/            # Artefatos de Engenharia de Requisitos
-└── frontend/                         # Next.js 14 (App Router) integrado à API; veja frontend/README.md
+├── frontend/                         # Next.js 14 (App Router) integrado à API; veja frontend/README.md
+└── docs/                             # Documentação da entrega N2
+    ├── DER/                          # Diagrama entidade-relacionamento (Mermaid)
+    ├── debitos-tecnicos/             # Registro e priorização de débitos técnicos
+    ├── handoff/                      # Guia e checklist para a equipe receptora
+    ├── matriz-de-papeis.md           # Papéis e contribuições da equipe na N2
+    └── acordo-manutenibilidade.docx  # Acordo de Manutenibilidade da equipe
 ```
 
 ## Status dos requisitos
@@ -127,7 +159,7 @@ A referência é o [PRD](backend/docs/prd.md). **✅ na `main`** indica código 
 | FR-19 | Registro de Perda de Ferramenta | ➡️ N3 | [#16](https://github.com/iagokoch/horangotango/issues/16) |
 
 Estado atual do backend: **15 FRs implementados na N2** e **4 reservados para N3**.
-A release v2.0 é uma etapa separada; a implementação não significa que a release já foi publicada.
+Estes 15 FRs fazem parte da release [v2.0](https://github.com/iagokoch/horangotango/releases/tag/v2.0).
 
 Backlog por entrega: [N2 — v2.0](https://github.com/iagokoch/horangotango/milestone/1) e
 [N3](https://github.com/iagokoch/horangotango/milestone/2). A cobertura dos FRs acima se refere
@@ -415,16 +447,28 @@ contratos e decisões do projeto. O status de implementação está na tabela de
 | [Guia de testes manuais](backend/docs/testing-manual.md) | Fluxo manual com Postman, Insomnia e curl |
 | [Coleção Postman](backend/docs/postman/monitoolring.postman_collection.json) | Requisições e asserções de Health, Auth, Staff, Tools, Settings e Loans |
 | [Engenharia de Requisitos — N2](backend/docs/requisitos-n2/README.md) | Visão e escopo, ERS, casos de uso, diagramas UML, matriz de rastreabilidade e plano de continuidade para N3 |
+| [Changelog v2.0](backend/docs/changelog-v2.0.md) | Mudanças da versão entregue, evidências de testes e continuidade |
+| [Roteiro de demonstração](backend/docs/roteiro-demonstracao-n2.md) | Demonstração do backend N2 em cerca de 15 minutos |
+| [DER](docs/DER/README.md) | Modelo de dados em Mermaid, derivado do changelog Liquibase |
+| [Débitos técnicos](docs/debitos-tecnicos/README.md) | Registro, origem, impacto, prioridade e issue de cada débito |
+| [Handoff](docs/handoff/README.md) | Guia de recepção: execução do zero, testes, riscos e checklist |
+| [Matriz de papéis](docs/matriz-de-papeis.md) | Atividades e evidências de cada integrante na N2 |
+| [Acordo de Manutenibilidade](docs/acordo-manutenibilidade.docx) | Política de débito técnico, DoR/DoD, testes, estilo e fluxo de versionamento |
 
-Os artefatos em `backend/docs/requisitos-n2/` foram elaborados por outros integrantes.
+Os artefatos em `backend/docs/requisitos-n2/` foram elaborados pelo Engenheiro de Requisitos.
 Representam a especificação e a rastreabilidade; funcionalidades previstas ali não devem
-ser interpretadas como implementação concluída.
+ser interpretadas como implementação concluída. O `Plano de continuidade.docx` está
+desatualizado (afirma que FR-8 a FR-18 não estão na `main`); o [handoff](docs/handoff/README.md)
+o substitui.
 
 ## Fluxo do repositório
 
-- O GitHub mantém uma única branch, **`main`**.
+- A `main` é a única branch permanente; branches de trabalho (`feat/…`, `fix/…`, `docs/…`) são
+  apagadas após o merge.
 - Commits seguem Conventional Commits em português, por exemplo,
   `docs: atualiza visao geral do projeto` ou `feat: registra devolucao de ferramenta`.
+- Alterações entram por Pull Request; a `main` não recebe commits diretos (veja o
+  [Acordo de Manutenibilidade](docs/acordo-manutenibilidade.docx)).
 - O trabalho é acompanhado por issues com os milestones
   [N2 — v2.0](https://github.com/iagokoch/horangotango/milestone/1) e
   [N3](https://github.com/iagokoch/horangotango/milestone/2).
@@ -496,6 +540,9 @@ Os **15 FRs do escopo da N2** estão implementados no backend. O registro de div
 O que **não** entra na N2, para a próxima equipe saber onde continuar. Nomes de rota de
 [`backend/docs/api-convencoes-http.md`](backend/docs/api-convencoes-http.md) e
 [`backend/docs/api-nomenclatura-recursos.md`](backend/docs/api-nomenclatura-recursos.md), sob `/api`.
+
+O registro completo, com origem, impacto e prioridade, está em [`docs/debitos-tecnicos`](docs/debitos-tecnicos/README.md);
+o guia de recepção, em [`docs/handoff`](docs/handoff/README.md).
 
 - **FR-6 — histórico de Membro (Staff)** ([#13](https://github.com/iagokoch/horangotango/issues/13)): falta a consulta de Staff aos Empréstimos de
   qualquer Membro, com Atrasos, Perdas e divergências. Começa em `GET /loans?memberId={id}`
