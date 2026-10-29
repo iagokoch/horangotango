@@ -30,17 +30,17 @@ Neste registro, **Severidade** reflete o impacto, e **Prioridade** usa a regra a
 (cai numa das três categorias), `Alta`, `Média` ou `Baixa`. As prioridades são uma proposta inicial
 para o PO confirmar na revisão do ciclo N3.
 
-> **Lacuna de processo.** O Acordo pede issues do tipo Débito Técnico, mas as issues abertas do
-> backlog usam as labels `enhancement`, `bug`, `n3` etc. e não há label `debito-tecnico`.
-> Os itens sem issue (coluna "Issue" com "—") estão listados no fim, em
-> [Itens sem issue](#itens-sem-issue-a-registrar).
+> **Issues dos débitos.** Em 29/10/2026 foram criadas as issues #36 a #45 para os débitos que não
+> tinham issue (label `debito-tecnico`, milestone N3). As issues #13 a #22, abertas antes, usam as
+> labels `enhancement`, `bug` e `n3` e ainda **não** têm a label `debito-tecnico`; a #22 pode ter o
+> escopo reduzido (ver TD-11).
 
 ## Resumo
 
 | ID | Débito | Origem | Severidade | Prioridade | Issue |
 |---|---|---|---|---|---|
 | TD-01 | Revogação de token no logout | Escopo N2 | Alta (segurança) | **Máxima** | [#19](https://github.com/iagokoch/horangotango/issues/19) |
-| TD-02 | `spring-security-crypto` 6.3.1 e senhas legadas > 72 bytes | PR #30 | Média (segurança) | **Máxima** | — |
+| TD-02 | `spring-security-crypto` 6.3.1 e senhas legadas > 72 bytes | PR #30 | Média (segurança) | **Máxima** | [#36](https://github.com/iagokoch/horangotango/issues/36) |
 | TD-03 | FR-6: histórico de empréstimos de um Membro (Staff) | Escopo N2 | Alta | **Máxima** (bloqueia o frontend) | [#13](https://github.com/iagokoch/horangotango/issues/13) |
 | TD-04 | FR-7: próprios empréstimos e `bloqueado` (Membro) | Escopo N2 | Alta | **Máxima** (bloqueia o frontend) | [#14](https://github.com/iagokoch/horangotango/issues/14) |
 | TD-05 | FR-15: divergência de checklist na devolução | Escopo N2 | Alta | **Máxima** (integridade) | [#15](https://github.com/iagokoch/horangotango/issues/15) |
@@ -50,16 +50,16 @@ para o PO confirmar na revisão do ciclo N3.
 | TD-09 | Metas de performance sem medição | NFR do PRD | Média | Média | [#20](https://github.com/iagokoch/horangotango/issues/20) |
 | TD-10 | LGPD e minimização de dados pessoais | NFR do PRD | Média | Alta | [#21](https://github.com/iagokoch/horangotango/issues/21) |
 | TD-11 | Rotas inexistentes respondem `401`/`403` em vez de `404` | Spring Security | Baixa | Baixa | [#22](https://github.com/iagokoch/horangotango/issues/22) |
-| TD-12 | Erros de filtros fora do MVC fora do formato `ErrorResponse` | Arquitetura | Baixa | Baixa | — |
-| TD-13 | Valores-sentinela da migração de ferramentas | Changeset 3 | Baixa | Baixa | — |
-| TD-14 | Ausência de pipeline de CI | Processo | Média | Alta | — |
-| TD-15 | Commit `462a434` com mensagem fora do padrão | Processo | Baixa | Baixa | — |
-| TD-16 | Retirada pelo ID do membro (sem busca de membros) | Frontend | Média | **Máxima** (depende de endpoint do backend) | — |
-| TD-17 | Atrasos globais indisponíveis no painel | Frontend | Média | Alta | — |
-| TD-18 | Ferramenta emprestada sem vínculo com o empréstimo ativo | Frontend/API | Baixa | Média | — |
+| TD-12 | Erros de filtros fora do MVC fora do formato `ErrorResponse` | Arquitetura | Baixa | Baixa | [#37](https://github.com/iagokoch/horangotango/issues/37) |
+| TD-13 | Valores-sentinela da migração de ferramentas | Changeset 3 | Baixa | Baixa | [#38](https://github.com/iagokoch/horangotango/issues/38) |
+| TD-14 | Ausência de pipeline de CI | Processo | Média | Alta | [#39](https://github.com/iagokoch/horangotango/issues/39) |
+| TD-15 | Commit `462a434` com mensagem fora do padrão | Processo | Baixa | Baixa | [#40](https://github.com/iagokoch/horangotango/issues/40) |
+| TD-16 | Retirada pelo ID do membro (sem busca de membros) | Frontend | Média | **Máxima** (depende de endpoint do backend) | [#41](https://github.com/iagokoch/horangotango/issues/41) |
+| TD-17 | Atrasos globais indisponíveis no painel | Frontend | Média | Alta | [#42](https://github.com/iagokoch/horangotango/issues/42) |
+| TD-18 | Ferramenta emprestada sem vínculo com o empréstimo ativo | Frontend/API | Baixa | Média | [#43](https://github.com/iagokoch/horangotango/issues/43) |
 | TD-19 | Lista "acompanhados" só em `localStorage` | Frontend | Média | Alta (some com TD-03/TD-04) | [#13](https://github.com/iagokoch/horangotango/issues/13), [#14](https://github.com/iagokoch/horangotango/issues/14) |
-| TD-20 | Lacunas de verificação (E2E manual, Docker, dispositivos) | Frontend | Baixa | Baixa | — |
-| TD-21 | Coerência do modelo garantida só pela aplicação (sem FK/CHECK) | DER | Baixa | Baixa | — |
+| TD-20 | Lacunas de verificação (E2E manual, Docker, dispositivos) | Frontend | Baixa | Baixa | [#44](https://github.com/iagokoch/horangotango/issues/44) |
+| TD-21 | Coerência do modelo garantida só pela aplicação (sem FK/CHECK) | DER | Baixa | Baixa | [#45](https://github.com/iagokoch/horangotango/issues/45) |
 
 ## Detalhamento
 
@@ -219,12 +219,6 @@ mão (`frontend/e2e/README.md`) e não roda em CI.
 Do [DER](../DER/README.md): `id_usuario_*` não têm FK; não há CHECK ligando
 `data_hora_devolucao`/`id_staff_devolucao` ao `status`; que o tomador seja `MEMBER` é regra do
 service. Risco baixo enquanto todo acesso passa pela API.
-
-## Itens sem issue (a registrar)
-
-Para cumprir a política acima, estes itens ainda precisam de issue (sugestão: label
-`debito-tecnico`, milestone `N3`): **TD-02, TD-12, TD-13, TD-14, TD-15** (só registro), **TD-16,
-TD-17, TD-18, TD-20, TD-21**.
 
 ## Como atualizar este registro
 
