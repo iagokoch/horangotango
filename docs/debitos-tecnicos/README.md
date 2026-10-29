@@ -31,9 +31,8 @@ Neste registro, **Severidade** reflete o impacto, e **Prioridade** usa a regra a
 para o PO confirmar na revisão do ciclo N3.
 
 > **Issues dos débitos.** Em 29/10/2026 foram criadas as issues #36 a #45 para os débitos que não
-> tinham issue (label `debito-tecnico`, milestone N3). As issues #13 a #22, abertas antes, usam as
-> labels `enhancement`, `bug` e `n3` e ainda **não** têm a label `debito-tecnico`; a #22 pode ter o
-> escopo reduzido (ver TD-11).
+> tinham issue (label `debito-tecnico`, milestone N3). As issues #13 a #22, abertas antes, também receberam
+> a label `debito-tecnico`. A #22 recebeu um comentário sugerindo reduzir o escopo ou fechá-la (ver TD-11).
 
 ## Resumo
 
